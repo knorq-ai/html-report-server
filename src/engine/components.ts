@@ -31,6 +31,7 @@ import type {
 import { inlineStyle, styleAttr } from "./theme.js";
 import { escapeHtml, sanitizeInlineHtml, sanitizeBlockHtml, sanitizeCssValue, elem } from "./html-utils.js";
 import { renderBarChart, renderLineChart, renderPieChart } from "./charts.js";
+import { renderDiagram } from "./diagrams.js";
 
 // ---------------------------------------------------------------------------
 // Badge variant → color mapping
@@ -756,6 +757,8 @@ export function renderBlock(block: Block, preset: StylePreset): string {
       return renderDivider(block, preset);
     case "html":
       return renderRawHtml(block, preset);
+    case "diagram":
+      return renderDiagram(block, preset);
     default: {
       // Exhaustive check: if a new block type is added, TypeScript will catch it
       const _exhaustive: never = block;

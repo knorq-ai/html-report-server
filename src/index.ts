@@ -61,7 +61,7 @@ const server = new McpServer({
     "",
     "Supported block types: section, heading, paragraph, list, callout,",
     "stat_cards, table, bar_chart, line_chart, pie_chart, progress_bars,",
-    "timeline, card_grid, comparison, badges, divider, html (escape hatch).",
+    "timeline, card_grid, comparison, badges, diagram, divider, html (escape hatch).",
   ].join("\n"),
 });
 
@@ -123,6 +123,36 @@ const badgeItemSchema = z.object({
   variant: z
     .enum(["success", "warning", "danger", "info", "neutral"])
     .optional(),
+});
+
+const diagramNodeSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  lines: z.array(z.string()).optional(),
+  color: z.string().optional(),
+  textColor: z.string().optional(),
+});
+
+const diagramGroupSchema = z.object({
+  label: z.string().optional(),
+  nodeIds: z.array(z.string()),
+  color: z.string().optional(),
+  style: z.enum(["solid", "dashed"]).optional(),
+});
+
+const diagramEdgeSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  label: z.string().optional(),
+  style: z.enum(["solid", "dashed"]).optional(),
+  color: z.string().optional(),
+});
+
+const diagramLayerSchema = z.object({
+  label: z.string(),
+  color: z.string().optional(),
+  nodes: z.array(diagramNodeSchema).max(50),
+  groups: z.array(diagramGroupSchema).max(20).optional(),
 });
 
 const blockSchema = z.discriminatedUnion("type", [
@@ -197,6 +227,13 @@ const blockSchema = z.discriminatedUnion("type", [
     height: z.number().min(1).max(20).optional().describe("Line height in pixels, 1-20 (default 1 for plain, 3 for gradient)"),
   }),
   z.object({ type: z.literal("html"), content: z.string().max(500_000) }),
+  z.object({
+    type: z.literal("diagram"),
+    title: z.string().optional(),
+    layers: z.array(diagramLayerSchema).max(20),
+    edges: z.array(diagramEdgeSchema).max(200),
+    dark: z.boolean().optional().describe("Dark theme (default false)"),
+  }),
 ]);
 
 const styleNameSchema = z

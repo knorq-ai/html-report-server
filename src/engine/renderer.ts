@@ -148,6 +148,10 @@ function summarizeBlock(block: Block): string {
       return block.gradient ? "divider (gradient)" : "divider";
     case "html":
       return `raw html: ${block.content.length} chars`;
+    case "diagram": {
+      const nodeCount = block.layers.reduce((sum, l) => sum + l.nodes.length, 0);
+      return `diagram: ${block.layers.length} layers, ${nodeCount} nodes, ${block.edges.length} edges${block.title ? ` — "${block.title}"` : ""}`;
+    }
     default:
       return `unknown type`;
   }

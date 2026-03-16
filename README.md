@@ -26,9 +26,24 @@ When an LLM generates HTML reports, it outputs verbose inline styles, SVG paths,
 | `minimal` | Content-dense: tight spacing, 720px width, no decoration |
 | `dashboard` | Data-dense: 1200px width, dark header tables, compact layout |
 
-### Block types (19)
+### Block types (20)
 
-`section` · `heading` · `paragraph` · `list` · `callout` · `stat_cards` · `hero_stats` · `metadata` · `table` · `bar_chart` · `line_chart` · `pie_chart` · `progress_bars` · `timeline` · `card_grid` · `comparison` · `badges` · `divider` · `html`
+| Category | Blocks |
+|---|---|
+| **Text** | `section`, `heading`, `paragraph`, `list`, `callout` |
+| **Data** | `stat_cards`, `hero_stats`, `metadata`, `table` |
+| **Charts** | `bar_chart`, `line_chart`, `pie_chart`, `progress_bars` |
+| **Layout** | `card_grid`, `comparison`, `timeline`, `badges`, `divider` |
+| **Diagrams** | `diagram` — layered architecture diagrams with nodes, groups, edges, dark/light theme |
+| **Escape hatch** | `html` — raw HTML (sanitized) |
+
+### Document-level options
+
+- `title` — report title (required)
+- `subtitle` — subtitle below the title
+- `badge` — badge label next to the title (e.g. "PERFORMANCE REPORT")
+- `style` — preset name
+- `style_overrides` — selective overrides for card/table/chart/sectionTitle tokens
 
 ### Token efficiency
 
@@ -156,7 +171,8 @@ src/
     ├── theme.ts       4 style presets + inline style builder
     ├── html-utils.ts  HTML escaping + sanitization
     ├── charts.ts      SVG bar/line/pie/donut charts
-    ├── components.ts  19 block type renderers
+    ├── diagrams.ts    SVG layered architecture diagrams
+    ├── components.ts  20 block type renderers
     ├── renderer.ts    Main render loop + block summarizer
     └── html-io.ts     File I/O + JSON comment round-trip
 ```

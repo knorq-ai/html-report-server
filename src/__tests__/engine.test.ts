@@ -682,6 +682,174 @@ describe("JSON comment security", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Diagram tests
+// ---------------------------------------------------------------------------
+
+describe("diagram block", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders a basic diagram with layers and nodes", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          {
+            label: "Frontend",
+            color: "#4a90d9",
+            nodes: [
+              { id: "web", title: "Web App", lines: [":3000"], color: "#4a90d9" },
+            ],
+          },
+          {
+            label: "Backend",
+            color: "#50b86c",
+            nodes: [
+              { id: "api", title: "API", color: "#50b86c" },
+            ],
+          },
+        ],
+        edges: [{ from: "web", to: "api" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("FRONTEND");
+    expect(html).toContain("BACKEND");
+    expect(html).toContain("Web App");
+    expect(html).toContain("API");
+    expect(html).toContain("<path"); // edge
+  });
+
+  it("renders dark theme with canvas background", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        dark: true,
+        layers: [
+          { label: "Layer", nodes: [{ id: "a", title: "Node" }] },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toContain("#16162a"); // dark canvas bg
+  });
+
+  it("renders groups with dashed borders", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          {
+            label: "Storage",
+            nodes: [
+              { id: "pg", title: "PostgreSQL" },
+              { id: "redis", title: "Redis" },
+            ],
+            groups: [{ label: "DATA", nodeIds: ["pg", "redis"], style: "dashed" }],
+          },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toContain("DATA");
+    expect(html).toContain("stroke-dasharray");
+  });
+
+  it("renders edge labels", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          {
+            label: "L",
+            nodes: [
+              { id: "a", title: "A" },
+              { id: "b", title: "B" },
+            ],
+          },
+        ],
+        edges: [{ from: "a", to: "b", label: "HTTP" }],
+      },
+      preset,
+    );
+    expect(html).toContain("HTTP");
+  });
+
+  it("handles dashed edges", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          { label: "L", nodes: [{ id: "a", title: "A" }, { id: "b", title: "B" }] },
+        ],
+        edges: [{ from: "a", to: "b", style: "dashed" }],
+      },
+      preset,
+    );
+    expect(html).toContain("stroke-dasharray");
+  });
+
+  it("returns empty string for empty layers", () => {
+    const html = renderBlock(
+      { type: "diagram", layers: [], edges: [] },
+      preset,
+    );
+    expect(html).toBe("");
+  });
+
+  it("ignores edges referencing non-existent nodes", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          { label: "L", nodes: [{ id: "a", title: "A" }] },
+        ],
+        edges: [{ from: "a", to: "missing" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    // Should not throw, just skip the bad edge
+  });
+
+  it("escapes HTML in node titles and edge labels", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          { label: "<script>", nodes: [{ id: "a", title: '<img onerror="alert(1)">' }] },
+        ],
+        edges: [{ from: "a", to: "a", label: '<script>xss</script>' }],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain('onerror="');
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("sanitizes color values in nodes", () => {
+    const html = renderBlock(
+      {
+        type: "diagram",
+        layers: [
+          {
+            label: "L",
+            nodes: [{ id: "a", title: "A", color: 'red"; onload="alert(1)' }],
+          },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    // sanitizeCssValue strips quotes
+    expect(html).not.toContain('onload="alert');
+  });
+});
+
 describe("getComponentExamples", () => {
   it("returns markdown with all block types", () => {
     const result = getComponentExamples();

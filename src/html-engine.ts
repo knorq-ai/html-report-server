@@ -354,6 +354,44 @@ export function getComponentExamples(): string {
       gradient: "var(--accent), var(--success)",
       height: 3,
     },
+    diagram: {
+      type: "diagram",
+      title: "System Architecture",
+      dark: true,
+      layers: [
+        {
+          label: "API",
+          color: "#4a90d9",
+          nodes: [
+            { id: "api", title: "REST API", lines: [":8080"], color: "#4a90d9" },
+            { id: "web", title: "Web UI", lines: [":3000"], color: "#4a90d9" },
+          ],
+        },
+        {
+          label: "Services",
+          color: "#50b86c",
+          nodes: [
+            { id: "auth", title: "Auth Service", color: "#50b86c" },
+            { id: "worker", title: "Worker", color: "#50b86c" },
+          ],
+        },
+        {
+          label: "Storage",
+          color: "#e6a23c",
+          nodes: [
+            { id: "pg", title: "PostgreSQL", color: "#e6a23c" },
+            { id: "redis", title: "Redis", color: "#e6a23c" },
+          ],
+          groups: [{ label: "DATA STORES", nodeIds: ["pg", "redis"], color: "#e6a23c", style: "dashed" }],
+        },
+      ],
+      edges: [
+        { from: "api", to: "auth", label: "JWT" },
+        { from: "api", to: "worker" },
+        { from: "auth", to: "pg" },
+        { from: "worker", to: "redis", style: "dashed" },
+      ],
+    },
     html: {
       type: "html",
       content: "<div style=\"text-align:center;color:var(--muted)\">Custom HTML content</div>",

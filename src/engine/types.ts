@@ -189,6 +189,48 @@ export interface RawHtmlBlock {
   content: string;
 }
 
+// ---------------------------------------------------------------------------
+// Diagram block — layered architecture diagrams
+// ---------------------------------------------------------------------------
+
+export interface DiagramNode {
+  id: string;
+  title: string;
+  lines?: string[];        // description lines below title
+  color?: string;          // border/accent color
+  textColor?: string;      // title text color
+}
+
+export interface DiagramGroup {
+  label?: string;
+  nodeIds: string[];
+  color?: string;
+  style?: "solid" | "dashed";
+}
+
+export interface DiagramEdge {
+  from: string;
+  to: string;
+  label?: string;
+  style?: "solid" | "dashed";
+  color?: string;
+}
+
+export interface DiagramLayer {
+  label: string;
+  color?: string;          // layer accent color (used for label + background tint)
+  nodes: DiagramNode[];
+  groups?: DiagramGroup[];
+}
+
+export interface DiagramBlock {
+  type: "diagram";
+  title?: string;
+  layers: DiagramLayer[];
+  edges: DiagramEdge[];
+  dark?: boolean;          // dark theme (default false)
+}
+
 export type Block =
   | SectionBlock
   | HeadingBlock
@@ -208,7 +250,8 @@ export type Block =
   | MetadataBlock
   | HeroStatsBlock
   | DividerBlock
-  | RawHtmlBlock;
+  | RawHtmlBlock
+  | DiagramBlock;
 
 // ---------------------------------------------------------------------------
 // Style preset — design tokens consumed by component renderers
