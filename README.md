@@ -26,14 +26,14 @@ When an LLM generates HTML reports, it outputs verbose inline styles, SVG paths,
 | `minimal` | Content-dense: tight spacing, 720px width, no decoration |
 | `dashboard` | Data-dense: 1200px width, dark header tables, compact layout |
 
-### Block types (20)
+### Block types (22)
 
 | Category | Blocks |
 |---|---|
 | **Text** | `section`, `heading`, `paragraph`, `list`, `callout` |
-| **Data** | `stat_cards`, `hero_stats`, `metadata`, `table` |
+| **Data** | `stat_cards`, `hero_stats`, `metadata`, `table`, `before_after` |
 | **Charts** | `bar_chart`, `line_chart`, `pie_chart`, `progress_bars` |
-| **Layout** | `card_grid`, `comparison`, `timeline`, `badges`, `divider` |
+| **Layout** | `card_grid`, `comparison`, `timeline`, `steps`, `badges`, `divider` |
 | **Diagrams** | `diagram` — layered architecture diagrams with nodes, groups, edges, dark/light theme |
 | **Escape hatch** | `html` — raw HTML (sanitized) |
 
@@ -53,7 +53,10 @@ When an LLM generates HTML reports, it outputs verbose inline styles, SVG paths,
 | Data table (5×10) | ~600 | ~150 | **75%** |
 | Bar chart (8 bars) | ~800 | ~60 | **92%** |
 | SVG line chart | ~1200 | ~80 | **93%** |
-| Full report (10 sections) | ~4000 | ~800 | **~80%** |
+| Before/after comparison (3 items) | ~900 | ~120 | **87%** |
+| Steps flow (5 steps) | ~500 | ~100 | **80%** |
+| Architecture diagram (4 layers, 16 edges) | ~8000 | ~1500 | **81%** |
+| Full report (30 blocks) | ~13000 | ~1700 | **~87%** |
 
 ## Installation
 
@@ -172,7 +175,7 @@ src/
     ├── html-utils.ts  HTML escaping + sanitization
     ├── charts.ts      SVG bar/line/pie/donut charts
     ├── diagrams.ts    SVG layered architecture diagrams
-    ├── components.ts  20 block type renderers
+    ├── components.ts  22 block type renderers
     ├── renderer.ts    Main render loop + block summarizer
     └── html-io.ts     File I/O + JSON comment round-trip
 ```

@@ -29,6 +29,14 @@
   ],
   "author": "html-report-server contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knorq-ai/html-report-server.git"
+  },
+  "homepage": "https://github.com/knorq-ai/html-report-server#readme",
+  "bugs": {
+    "url": "https://github.com/knorq-ai/html-report-server/issues"
+  },
   "engines": {
     "node": ">=20"
   },
