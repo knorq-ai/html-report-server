@@ -1,0 +1,45 @@
+{
+  "name": "html-report-server",
+  "version": "1.0.0",
+  "description": "MCP server for generating styled HTML reports from structured JSON — stat cards, tables, SVG charts, timelines, and more",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "html-report-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "html",
+    "report",
+    "charts",
+    "dashboard",
+    "model-context-protocol"
+  ],
+  "author": "html-report-server contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.0.18"
+  }
+}
