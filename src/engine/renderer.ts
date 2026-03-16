@@ -152,6 +152,8 @@ function summarizeBlock(block: Block): string {
       const nodeCount = block.layers.reduce((sum, l) => sum + l.nodes.length, 0);
       return `diagram: ${block.layers.length} layers, ${nodeCount} nodes, ${block.edges.length} edges${block.title ? ` — "${block.title}"` : ""}`;
     }
+    case "before_after":
+      return `before_after: ${block.items.length} comparisons`;
     default:
       return `unknown type`;
   }

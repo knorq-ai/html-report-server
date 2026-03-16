@@ -160,6 +160,7 @@ describe("renderDocument", () => {
         { type: "badges", items: [{ text: "OK", variant: "success" }] },
         { type: "metadata", items: [{ label: "Date", value: "2024-01-01" }] },
         { type: "hero_stats", stats: [{ value: "55%", label: "Improvement" }] },
+        { type: "before_after", items: [{ title: "Speed", before: { label: "Old", value: 1.0, unit: "s" }, after: { label: "New", value: 0.5, unit: "s" }, improvement: "50% faster" }] },
         { type: "divider" },
         { type: "html", content: "<em>custom</em>" },
       ],
@@ -255,6 +256,24 @@ describe("renderBlock", () => {
     );
     expect(html).toContain("75%");
     expect(html).toContain("Goal");
+  });
+
+  it("renders before_after comparison cards", () => {
+    const html = renderBlock({
+      type: "before_after",
+      items: [{
+        title: "Load Time",
+        before: { label: "Old", value: 1.0, unit: "s" },
+        after: { label: "New", value: 0.5, unit: "s" },
+        improvement: "50% faster",
+      }],
+    }, preset);
+    expect(html).toContain("Load Time");
+    expect(html).toContain("50% faster");
+    expect(html).toContain("Old");
+    expect(html).toContain("New");
+    expect(html).toContain("1"); // before value
+    expect(html).toContain("0.5"); // after value
   });
 
   it("renders clean style with shadows instead of borders", () => {

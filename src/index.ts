@@ -61,7 +61,7 @@ const server = new McpServer({
     "",
     "Supported block types: section, heading, paragraph, list, callout,",
     "stat_cards, table, bar_chart, line_chart, pie_chart, progress_bars,",
-    "timeline, card_grid, comparison, badges, diagram, divider, html (escape hatch).",
+    "timeline, card_grid, comparison, badges, before_after, diagram, divider, html (escape hatch).",
   ].join("\n"),
 });
 
@@ -123,6 +123,13 @@ const badgeItemSchema = z.object({
   variant: z
     .enum(["success", "warning", "danger", "info", "neutral"])
     .optional(),
+});
+
+const beforeAfterItemSchema = z.object({
+  title: z.string(),
+  before: z.object({ label: z.string(), value: z.number(), unit: z.string().optional() }),
+  after: z.object({ label: z.string(), value: z.number(), unit: z.string().optional() }),
+  improvement: z.string().optional(),
 });
 
 const diagramNodeSchema = z.object({
@@ -234,6 +241,7 @@ const blockSchema = z.discriminatedUnion("type", [
     edges: z.array(diagramEdgeSchema).max(200),
     dark: z.boolean().optional().describe("Dark theme (default false)"),
   }),
+  z.object({ type: z.literal("before_after"), items: z.array(beforeAfterItemSchema).max(20) }),
 ]);
 
 const styleNameSchema = z

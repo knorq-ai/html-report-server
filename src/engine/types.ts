@@ -231,6 +231,18 @@ export interface DiagramBlock {
   dark?: boolean;          // dark theme (default false)
 }
 
+export interface BeforeAfterItem {
+  title: string;
+  before: { label: string; value: number; unit?: string };
+  after: { label: string; value: number; unit?: string };
+  improvement?: string;   // e.g. "55% 高速化"
+}
+
+export interface BeforeAfterBlock {
+  type: "before_after";
+  items: BeforeAfterItem[];
+}
+
 export type Block =
   | SectionBlock
   | HeadingBlock
@@ -251,7 +263,8 @@ export type Block =
   | HeroStatsBlock
   | DividerBlock
   | RawHtmlBlock
-  | DiagramBlock;
+  | DiagramBlock
+  | BeforeAfterBlock;
 
 // ---------------------------------------------------------------------------
 // Style preset — design tokens consumed by component renderers

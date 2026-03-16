@@ -348,6 +348,23 @@ export function getComponentExamples(): string {
         { value: "26%", label: "App Size Reduction", subtitle: "~44MB → ~33MB", color: "var(--accent)" },
       ],
     },
+    before_after: {
+      type: "before_after",
+      items: [
+        {
+          title: "Initial Load Time",
+          before: { label: "Before", value: 0.81, unit: "s" },
+          after: { label: "After", value: 0.36, unit: "s" },
+          improvement: "55% faster",
+        },
+        {
+          title: "Page Load",
+          before: { label: "Before", value: 1.93, unit: "s" },
+          after: { label: "After", value: 1.22, unit: "s" },
+          improvement: "37% faster",
+        },
+      ],
+    },
     divider: { type: "divider" },
     "divider (gradient)": {
       type: "divider",
