@@ -154,6 +154,8 @@ function summarizeBlock(block: Block): string {
     }
     case "before_after":
       return `before_after: ${block.items.length} comparisons`;
+    case "steps":
+      return `steps: ${block.steps.length} steps — ${block.steps.map((s) => s.title).join(" → ")}`;
     default:
       return `unknown type`;
   }

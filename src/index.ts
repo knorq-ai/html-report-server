@@ -61,7 +61,7 @@ const server = new McpServer({
     "",
     "Supported block types: section, heading, paragraph, list, callout,",
     "stat_cards, table, bar_chart, line_chart, pie_chart, progress_bars,",
-    "timeline, card_grid, comparison, badges, before_after, diagram, divider, html (escape hatch).",
+    "timeline, card_grid, comparison, badges, before_after, steps, diagram, divider, html (escape hatch).",
   ].join("\n"),
 });
 
@@ -130,6 +130,12 @@ const beforeAfterItemSchema = z.object({
   before: z.object({ label: z.string(), value: z.number(), unit: z.string().optional() }),
   after: z.object({ label: z.string(), value: z.number(), unit: z.string().optional() }),
   improvement: z.string().optional(),
+});
+
+const stepItemSchema = z.object({
+  label: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional(),
 });
 
 const diagramNodeSchema = z.object({
@@ -242,6 +248,7 @@ const blockSchema = z.discriminatedUnion("type", [
     dark: z.boolean().optional().describe("Dark theme (default false)"),
   }),
   z.object({ type: z.literal("before_after"), items: z.array(beforeAfterItemSchema).max(20) }),
+  z.object({ type: z.literal("steps"), steps: z.array(stepItemSchema).max(8) }),
 ]);
 
 const styleNameSchema = z

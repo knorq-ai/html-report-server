@@ -243,6 +243,17 @@ export interface BeforeAfterBlock {
   items: BeforeAfterItem[];
 }
 
+export interface StepItem {
+  label?: string;      // defaults to "STEP {n}" if omitted
+  title: string;
+  description?: string;
+}
+
+export interface StepsBlock {
+  type: "steps";
+  steps: StepItem[];
+}
+
 export type Block =
   | SectionBlock
   | HeadingBlock
@@ -264,7 +275,8 @@ export type Block =
   | DividerBlock
   | RawHtmlBlock
   | DiagramBlock
-  | BeforeAfterBlock;
+  | BeforeAfterBlock
+  | StepsBlock;
 
 // ---------------------------------------------------------------------------
 // Style preset — design tokens consumed by component renderers

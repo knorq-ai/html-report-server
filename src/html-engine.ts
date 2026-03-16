@@ -365,6 +365,15 @@ export function getComponentExamples(): string {
         },
       ],
     },
+    steps: {
+      type: "steps",
+      steps: [
+        { title: "Upload", description: "Upload source files" },
+        { title: "Process", description: "Parse and validate data" },
+        { title: "Review", description: "Compare candidates" },
+        { title: "Export", description: "Download results" },
+      ],
+    },
     divider: { type: "divider" },
     "divider (gradient)": {
       type: "divider",

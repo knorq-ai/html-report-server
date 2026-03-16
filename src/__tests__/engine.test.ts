@@ -161,6 +161,7 @@ describe("renderDocument", () => {
         { type: "metadata", items: [{ label: "Date", value: "2024-01-01" }] },
         { type: "hero_stats", stats: [{ value: "55%", label: "Improvement" }] },
         { type: "before_after", items: [{ title: "Speed", before: { label: "Old", value: 1.0, unit: "s" }, after: { label: "New", value: 0.5, unit: "s" }, improvement: "50% faster" }] },
+        { type: "steps", steps: [{ title: "A" }, { title: "B" }] },
         { type: "divider" },
         { type: "html", content: "<em>custom</em>" },
       ],
@@ -274,6 +275,48 @@ describe("renderBlock", () => {
     expect(html).toContain("New");
     expect(html).toContain("1"); // before value
     expect(html).toContain("0.5"); // after value
+  });
+
+  it("renders steps with titles, auto-generated labels, and descriptions", () => {
+    const html = renderBlock(
+      {
+        type: "steps",
+        steps: [
+          { title: "Upload", description: "Upload source files" },
+          { title: "Process", description: "Parse and validate" },
+          { title: "Export" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("display:flex");
+    expect(html).toContain("Upload");
+    expect(html).toContain("Process");
+    expect(html).toContain("Export");
+    expect(html).toContain("STEP 1");
+    expect(html).toContain("STEP 2");
+    expect(html).toContain("STEP 3");
+    expect(html).toContain("Upload source files");
+    expect(html).toContain("Parse and validate");
+    // Arrow chevrons between steps
+    expect(html).toContain("&#x276F;");
+  });
+
+  it("renders steps with custom labels overriding auto-numbering", () => {
+    const html = renderBlock(
+      {
+        type: "steps",
+        steps: [
+          { label: "Phase A", title: "Design" },
+          { label: "Phase B", title: "Build" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Phase A");
+    expect(html).toContain("Phase B");
+    expect(html).not.toContain("STEP 1");
+    expect(html).not.toContain("STEP 2");
   });
 
   it("renders clean style with shadows instead of borders", () => {
@@ -680,6 +723,26 @@ describe("security in rendered blocks", () => {
     );
     expect(html).toContain("<b>ok</b>");
     expect(html).not.toContain("<iframe");
+  });
+
+  it("escapes XSS in steps title, description, and label", () => {
+    const html = renderBlock(
+      {
+        type: "steps",
+        steps: [
+          {
+            label: '<script>alert("label")</script>',
+            title: '<img onerror="alert(1)">',
+            description: '<script>alert("desc")</script>',
+          },
+        ],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain('onerror="alert');
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("&lt;img onerror=&quot;alert(1)&quot;&gt;");
   });
 
   it("sanitizes raw html block", () => {

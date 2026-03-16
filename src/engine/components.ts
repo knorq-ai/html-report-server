@@ -27,6 +27,7 @@ import type {
   DividerBlock,
   RawHtmlBlock,
   BeforeAfterBlock,
+  StepsBlock,
   StylePreset,
 } from "./types.js";
 import { inlineStyle, styleAttr } from "./theme.js";
@@ -898,6 +899,81 @@ function renderBeforeAfter(
 }
 
 // ---------------------------------------------------------------------------
+// Steps (horizontal process flow)
+// ---------------------------------------------------------------------------
+
+function renderSteps(block: StepsBlock, preset: StylePreset): string {
+  const containerStyle = inlineStyle({
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    flexWrap: "wrap",
+    marginBottom: preset.blockGap,
+  });
+
+  const items = block.steps
+    .map((step, i) => {
+      const label = step.label ?? `STEP ${i + 1}`;
+
+      // Arrow chevron between steps
+      let arrow = "";
+      if (i > 0) {
+        const arrowStyle = inlineStyle({
+          color: "var(--muted)",
+          fontSize: "1.5rem",
+          lineHeight: "1",
+          userSelect: "none",
+        });
+        arrow = elem("span", { style: arrowStyle }, "&#x276F;");
+      }
+
+      // Step card
+      const cardStyle = inlineStyle({
+        flex: "1 1 160px",
+        maxWidth: "240px",
+        borderRadius: preset.card.borderRadius,
+        border: preset.card.border !== "none" ? preset.card.border : undefined,
+        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : undefined,
+        padding: preset.card.padding,
+        background: preset.card.background,
+      });
+
+      const labelStyle = inlineStyle({
+        fontSize: "0.7rem",
+        fontWeight: "700",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+        color: "var(--accent)",
+        marginBottom: "0.25rem",
+      });
+
+      const titleStyle = inlineStyle({
+        fontWeight: "600",
+        fontSize: "1rem",
+        color: "var(--fg)",
+      });
+
+      let cardContent = elem("div", { style: labelStyle }, escapeHtml(label));
+      cardContent += elem("div", { style: titleStyle }, escapeHtml(step.title));
+
+      if (step.description) {
+        const descStyle = inlineStyle({
+          fontSize: "0.8rem",
+          color: "var(--muted)",
+          marginTop: "0.25rem",
+          lineHeight: "1.4",
+        });
+        cardContent += elem("div", { style: descStyle }, escapeHtml(step.description));
+      }
+
+      return arrow + elem("div", { style: cardStyle }, cardContent);
+    })
+    .join("\n");
+
+  return elem("div", { style: containerStyle }, items);
+}
+
+// ---------------------------------------------------------------------------
 // Block dispatcher
 // ---------------------------------------------------------------------------
 
@@ -948,6 +1024,8 @@ export function renderBlock(block: Block, preset: StylePreset): string {
       return renderDiagram(block, preset);
     case "before_after":
       return renderBeforeAfter(block, preset);
+    case "steps":
+      return renderSteps(block, preset);
     default: {
       // Exhaustive check: if a new block type is added, TypeScript will catch it
       const _exhaustive: never = block;
