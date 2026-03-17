@@ -5,8 +5,8 @@
  * renderers consume. The builder converts token objects into inline
  * style strings for HTML output.
  *
- * All presets use CSS variables (--fg, --bg, etc.) defined by the host
- * application's wrapper, ensuring seamless light/dark mode support.
+ * All presets use CSS variables (--fg, --bg, etc.) defined in the
+ * HTML shell emitted by html-io.ts, with light/dark mode support.
  */
 
 import type { StylePreset, StyleName, StyleOverrides } from "./types.js";

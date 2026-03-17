@@ -12,10 +12,10 @@ import { inlineStyle } from "./theme.js";
 import { escapeHtml, elem } from "./html-utils.js";
 
 /**
- * Render a complete report document to body-only HTML.
+ * Render a complete report document to body HTML.
  *
- * The output is designed to be embedded inside a host document that provides
- * the CSS variable definitions (--fg, --bg, --muted, --border, etc.).
+ * The output is wrapped in a full HTML document shell (with CSS variable
+ * definitions for light/dark mode) by writeHtmlFile in html-io.ts.
  */
 export function renderDocument(doc: ReportDocument): string {
   const preset = resolvePreset(doc.style, doc.styleOverrides);

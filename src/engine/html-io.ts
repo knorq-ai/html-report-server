@@ -37,7 +37,7 @@ export async function writeHtmlFile(
   }
 
   const jsonComment = embedJsonComment(doc);
-  const content = jsonComment + "\n" + bodyHtml;
+  const content = htmlShell(doc.title, jsonComment + "\n" + bodyHtml);
 
   try {
     await fs.writeFile(filePath, content, "utf-8");
@@ -47,6 +47,55 @@ export async function writeHtmlFile(
       `Failed to write file: ${(e as Error).message}`,
     );
   }
+}
+
+/**
+ * Wrap body content in a complete HTML document with CSS variable definitions.
+ *
+ * Provides light/dark theme support via prefers-color-scheme and
+ * defines all CSS variables that component renderers depend on.
+ */
+function htmlShell(title: string, body: string): string {
+  const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${safeTitle}</title>
+<style>
+:root {
+  --fg: #1f2328;
+  --bg: #ffffff;
+  --muted: #656d76;
+  --border: #d1d9e0;
+  --code-bg: #f6f8fa;
+  --accent: #0969da;
+  --success: #1a7f37;
+  --warning: #9a6700;
+  --danger: #d1242f;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --bg: #0d1117;
+    --muted: #8b949e;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --accent: #4493f8;
+    --success: #3fb950;
+    --warning: #d29922;
+    --danger: #f85149;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); }
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
 }
 
 /**
