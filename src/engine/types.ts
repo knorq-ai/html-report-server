@@ -114,6 +114,7 @@ export interface TimelineEntry {
   title: string;
   description?: string;
   status?: string;
+  color?: string;   // dot/date color, e.g. "var(--success)" or "#6f42c1"
 }
 
 export interface TimelineBlock {
@@ -137,7 +138,7 @@ export interface CardGridBlock {
 export interface ComparisonItem {
   title: string;
   points: string[];
-  highlight?: boolean;
+  highlight?: boolean | string;  // true = accent, or "accent" | "purple" | "success" | "warning" | "danger"
 }
 
 export interface ComparisonBlock {
@@ -165,11 +166,19 @@ export interface MetadataBlock {
   items: MetadataItem[];
 }
 
+export interface HeroStatBreakdownItem {
+  label: string;
+  value: string;
+  struck?: boolean;    // render with strikethrough (e.g. already contracted)
+}
+
 export interface HeroStat {
   value: string;
   label: string;
   subtitle?: string;
   color?: string;
+  breakdown?: HeroStatBreakdownItem[];   // optional line-item breakdown
+  breakdownTotal?: string;               // "label|value" or just "value"
 }
 
 export interface HeroStatsBlock {
@@ -342,12 +351,15 @@ export interface StyleOverrides {
   sectionTitle?: Partial<SectionTitleStyle>;
 }
 
+export type ThemeMode = "auto" | "light" | "dark";
+
 export interface ReportDocument {
   title: string;
   subtitle?: string;
   badge?: string;
   style?: StyleName;
   styleOverrides?: StyleOverrides;
+  theme?: ThemeMode;
   blocks: Block[];
 }
 

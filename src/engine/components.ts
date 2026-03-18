@@ -48,7 +48,7 @@ const BADGE_COLORS: Record<string, { bg: string; fg: string }> = {
 };
 
 // ---------------------------------------------------------------------------
-// Callout variant → accent color
+// Callout variant → accent color / background
 // ---------------------------------------------------------------------------
 
 const CALLOUT_ACCENTS: Record<string, string> = {
@@ -57,6 +57,48 @@ const CALLOUT_ACCENTS: Record<string, string> = {
   success: "var(--success)",
   danger: "var(--danger)",
 };
+
+const CALLOUT_BACKGROUNDS: Record<string, string> = {
+  info: "var(--info-light)",
+  warning: "var(--warning-light)",
+  success: "var(--success-light)",
+  danger: "var(--danger-light)",
+};
+
+// ---------------------------------------------------------------------------
+// Highlight color resolver (for comparison blocks)
+// ---------------------------------------------------------------------------
+
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  accent: "var(--accent)",
+  purple: "var(--purple)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--danger)",
+};
+
+function resolveHighlightColor(highlight?: boolean | string): string | null {
+  if (!highlight) return null;
+  if (highlight === true) return "var(--accent)";
+  return sanitizeCssValue(HIGHLIGHT_COLORS[highlight] ?? highlight);
+}
+
+const HIGHLIGHT_BG: Record<string, string> = {
+  accent: "var(--accent-light)",
+  purple: "var(--purple-light)",
+  success: "var(--success-light)",
+  warning: "var(--warning-light)",
+  danger: "var(--danger-light)",
+};
+
+function resolveHighlightBg(highlight?: boolean | string): string | null {
+  if (!highlight) return null;
+  if (highlight === true) return "var(--accent-light)";
+  if (typeof highlight === "string") {
+    return HIGHLIGHT_BG[highlight] ?? null;
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Trend arrow
@@ -79,32 +121,84 @@ function trendColor(trend?: string): string {
 // ---------------------------------------------------------------------------
 
 function renderSection(block: SectionBlock, preset: StylePreset): string {
-  const st = preset.sectionTitle;
-  const titleStyle = inlineStyle({
-    textTransform: st.textTransform,
-    fontSize: st.fontSize,
-    fontWeight: st.fontWeight,
-    letterSpacing: st.letterSpacing,
-    color: "var(--muted)",
-    paddingBottom: st.borderBottom !== "none" ? "0.5rem" : undefined,
-    borderBottom: st.borderBottom !== "none" ? st.borderBottom : undefined,
-    marginBottom: st.marginBottom,
+  const containerStyle = inlineStyle({
     marginTop: preset.sectionGap,
+    marginBottom: "1.5rem",
   });
 
-  let html = elem("div", { style: titleStyle }, escapeHtml(block.title));
+  // Detect "01 · TITLE" or "01 - TITLE" pattern for eyebrow badge
+  const isNumberedSection = /^\d{1,3}\s*[·\-–]/.test(block.title);
+
+  let html: string;
+  if (isNumberedSection) {
+    // Eyebrow badge with section number — full title goes in the pill
+    const eyebrowStyle = inlineStyle({
+      display: "inline-flex",
+      alignItems: "center",
+      marginBottom: "0.4rem",
+    });
+    const numStyle = inlineStyle({
+      fontSize: "0.6rem",
+      fontWeight: "800",
+      letterSpacing: "0.1em",
+      color: "var(--accent)",
+      textTransform: "uppercase",
+      background: "var(--accent-light)",
+      padding: "0.2rem 0.65rem",
+      borderRadius: "4px",
+    });
+
+    html = elem("div", { style: eyebrowStyle }, elem("span", { style: numStyle }, escapeHtml(block.title)));
+
+    // Subtitle becomes the main heading when using eyebrow pattern
+    if (block.subtitle) {
+      const titleStyle = inlineStyle({
+        fontSize: "1.2rem",
+        fontWeight: "800",
+        color: "var(--fg)",
+        letterSpacing: "-0.015em",
+        lineHeight: "1.3",
+      });
+      html += elem("h2", { style: titleStyle }, escapeHtml(block.subtitle));
+      // Mark subtitle as already rendered
+      block = { ...block, subtitle: undefined };
+    }
+  } else {
+    // Fallback: original section style
+    const st = preset.sectionTitle;
+    const titleStyle = inlineStyle({
+      textTransform: st.textTransform,
+      fontSize: st.fontSize,
+      fontWeight: st.fontWeight,
+      letterSpacing: st.letterSpacing,
+      color: "var(--muted)",
+      paddingBottom: st.borderBottom !== "none" ? "0.5rem" : undefined,
+      borderBottom: st.borderBottom !== "none" ? st.borderBottom : undefined,
+      marginBottom: st.marginBottom,
+    });
+    html = elem("div", { style: titleStyle }, escapeHtml(block.title));
+  }
 
   if (block.subtitle) {
     const subStyle = inlineStyle({
       fontSize: "0.875rem",
       color: "var(--muted)",
-      marginTop: "-0.5rem",
-      marginBottom: "1rem",
+      marginTop: "0.2rem",
     });
     html += elem("div", { style: subStyle }, escapeHtml(block.subtitle));
   }
 
-  return html;
+  // Thin rule (only for eyebrow sections or when preset has a border)
+  if (isNumberedSection || preset.sectionTitle.borderBottom !== "none") {
+    const ruleStyle = inlineStyle({
+      height: "1px",
+      background: "var(--border)",
+      margin: "0.875rem 0 0",
+    });
+    html += elem("div", { style: ruleStyle }, "");
+  }
+
+  return elem("div", { style: containerStyle }, html);
 }
 
 function renderHeading(block: HeadingBlock, _preset: StylePreset): string {
@@ -131,11 +225,13 @@ function renderList(block: ListBlock, preset: StylePreset): string {
 }
 
 function renderCallout(block: CalloutBlock, preset: StylePreset): string {
-  const accent = CALLOUT_ACCENTS[block.variant ?? "info"] ?? CALLOUT_ACCENTS.info;
+  const variant = block.variant ?? "info";
+  const accent = CALLOUT_ACCENTS[variant] ?? CALLOUT_ACCENTS.info;
+  const bg = CALLOUT_BACKGROUNDS[variant] ?? "var(--code-bg)";
   const style = inlineStyle({
     borderLeft: `4px solid ${accent}`,
     borderRadius: preset.card.borderRadius,
-    background: "var(--code-bg)",
+    background: bg,
     padding: "1rem 1.25rem",
     marginBottom: preset.blockGap,
   });
@@ -143,16 +239,17 @@ function renderCallout(block: CalloutBlock, preset: StylePreset): string {
   let content = "";
   if (block.title) {
     const titleStyle = inlineStyle({
-      fontWeight: "600",
-      marginBottom: "0.25rem",
+      fontWeight: "700",
+      marginBottom: "0.35rem",
       color: "var(--fg)",
+      fontSize: "0.875rem",
     });
     content += elem("div", { style: titleStyle }, escapeHtml(block.title));
   }
   // Callout text supports inline HTML (bold, links) — sanitized to an allowlist
   content += elem(
     "div",
-    { style: "color:var(--fg);line-height:1.6" },
+    { style: "color:var(--fg);line-height:1.72;font-size:0.845rem;white-space:pre-line" },
     sanitizeInlineHtml(block.text),
   );
 
@@ -223,6 +320,7 @@ function renderTable(block: TableBlock, preset: StylePreset): string {
     marginBottom: preset.blockGap,
     borderRadius: ts.borderRadius !== "0" ? ts.borderRadius : undefined,
     border: ts.outerBorder,
+    boxShadow: "var(--shadow-sm)",
   });
 
   const tableStyle = inlineStyle({
@@ -235,10 +333,13 @@ function renderTable(block: TableBlock, preset: StylePreset): string {
   const thStyle = inlineStyle({
     background: ts.headerBg,
     color: ts.headerColor,
-    padding: "0.625rem 0.75rem",
+    padding: "0.7rem 1rem",
     textAlign: "left",
-    fontWeight: "600",
-    borderBottom: `1px solid var(--border)`,
+    fontWeight: "700",
+    fontSize: "0.72rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+    borderBottom: `2px solid var(--border)`,
   });
 
   const ths = block.headers
@@ -254,9 +355,11 @@ function renderTable(block: TableBlock, preset: StylePreset): string {
       const tds = row
         .map((cell) => {
           const tdStyle = inlineStyle({
-            padding: "0.5rem 0.75rem",
+            padding: "0.6rem 1rem",
             borderBottom: "1px solid var(--border)",
             background: rowBg,
+            lineHeight: "1.5",
+            verticalAlign: "top",
           });
           return elem("td", { style: tdStyle }, escapeHtml(cell));
         })
@@ -270,11 +373,12 @@ function renderTable(block: TableBlock, preset: StylePreset): string {
 
   if (block.caption) {
     const captionStyle = inlineStyle({
-      fontSize: "0.8rem",
+      fontSize: "0.75rem",
       color: "var(--muted)",
       marginTop: "-0.5rem",
       marginBottom: preset.blockGap,
       textAlign: "center",
+      padding: "0.4rem 0",
     });
     html += elem("div", { style: captionStyle }, escapeHtml(block.caption));
   }
@@ -339,48 +443,61 @@ function renderProgressBars(
 function renderTimeline(block: TimelineBlock, preset: StylePreset): string {
   const containerStyle = inlineStyle({
     position: "relative",
-    paddingLeft: "2rem",
+    paddingLeft: "2.5rem",
     marginBottom: preset.blockGap,
   });
 
   // Vertical line
   const lineStyle = inlineStyle({
     position: "absolute",
-    left: "0.5rem",
-    top: "0.25rem",
-    bottom: "0.25rem",
+    left: "0.625rem",
+    top: "0.5rem",
+    bottom: "0.5rem",
     width: "2px",
-    background: "var(--border)",
+    background: "linear-gradient(to bottom, var(--accent) 0%, var(--border) 100%)",
+    borderRadius: "2px",
   });
 
   const entries = block.entries
     .map((entry) => {
+      const dotColor = sanitizeCssValue(entry.color ?? "var(--accent)");
+
       const entryStyle = inlineStyle({
         position: "relative",
-        marginBottom: "1.25rem",
+        marginBottom: "1.5rem",
       });
 
       // Dot
       const dotStyle = inlineStyle({
         position: "absolute",
-        left: "-1.75rem",
-        top: "0.35rem",
-        width: "10px",
-        height: "10px",
+        left: "-1.975rem",
+        top: "0.3rem",
+        width: "13px",
+        height: "13px",
         borderRadius: "50%",
-        background: "var(--accent)",
-        border: "2px solid var(--bg)",
+        background: dotColor,
+        border: "2.5px solid var(--bg)",
+        boxShadow: `0 0 0 2px ${dotColor}`,
       });
 
       const dateStyle = inlineStyle({
-        fontSize: "0.75rem",
-        color: "var(--muted)",
-        marginBottom: "0.125rem",
+        fontSize: "0.68rem",
+        fontWeight: "800",
+        color: dotColor,
+        textTransform: "uppercase",
+        letterSpacing: "0.07em",
+        marginBottom: "0.1rem",
       });
 
       const titleStyle = inlineStyle({
-        fontWeight: "600",
+        fontWeight: "700",
         color: "var(--fg)",
+        fontSize: "0.92rem",
+        display: "flex",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "6px",
+        marginBottom: "0.2rem",
       });
 
       let content = elem("div", { style: dotStyle }, "");
@@ -400,10 +517,10 @@ function renderTimeline(block: TimelineBlock, preset: StylePreset): string {
 
       if (entry.description) {
         const descStyle = inlineStyle({
-          fontSize: "0.875rem",
+          fontSize: "0.84rem",
           color: "var(--muted)",
           marginTop: "0.125rem",
-          lineHeight: "1.5",
+          lineHeight: "1.55",
         });
         content += elem("div", { style: descStyle }, escapeHtml(entry.description));
       }
@@ -433,7 +550,7 @@ function renderCardGrid(block: CardGridBlock, preset: StylePreset): string {
       const cardStyle = inlineStyle({
         borderRadius: preset.card.borderRadius,
         border: preset.card.border !== "none" ? preset.card.border : undefined,
-        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : undefined,
+        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : "var(--shadow-sm)",
         padding: preset.card.padding,
         background: preset.card.background,
       });
@@ -448,17 +565,18 @@ function renderCardGrid(block: CardGridBlock, preset: StylePreset): string {
       }
 
       const titleStyle = inlineStyle({
-        fontWeight: "600",
+        fontWeight: "700",
         color: "var(--fg)",
-        marginBottom: "0.5rem",
+        fontSize: "0.9rem",
+        marginBottom: "0.45rem",
         marginTop: card.badge ? "0.5rem" : undefined,
       });
       content += elem("div", { style: titleStyle }, escapeHtml(card.title));
 
       const bodyStyle = inlineStyle({
-        fontSize: "0.875rem",
+        fontSize: "0.84rem",
         color: "var(--muted)",
-        lineHeight: "1.5",
+        lineHeight: "1.65",
       });
       content += elem("div", { style: bodyStyle }, escapeHtml(card.body));
 
@@ -483,24 +601,27 @@ function renderComparison(
 
   const items = block.items
     .map((item) => {
+      const hlColor = resolveHighlightColor(item.highlight);
+      const hlBg = resolveHighlightBg(item.highlight);
+
       const cardStyle = inlineStyle({
         borderRadius: preset.card.borderRadius,
-        border: item.highlight
-          ? "2px solid var(--accent)"
+        border: hlColor
+          ? `2px solid ${hlColor}`
           : preset.card.border !== "none"
             ? preset.card.border
             : "1px solid var(--border)",
-        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : undefined,
+        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : "var(--shadow-sm)",
         padding: preset.card.padding,
-        background: preset.card.background,
+        background: hlBg ?? preset.card.background,
       });
 
       const titleStyle = inlineStyle({
-        fontWeight: "600",
-        fontSize: "1rem",
+        fontWeight: "700",
+        fontSize: "0.9rem",
         color: "var(--fg)",
-        marginBottom: "0.75rem",
-        paddingBottom: "0.5rem",
+        marginBottom: "0.875rem",
+        paddingBottom: "0.625rem",
         borderBottom: "1px solid var(--border)",
       });
 
@@ -510,14 +631,22 @@ function renderComparison(
         margin: "0",
       });
 
+      const bulletColor = hlColor ?? "var(--accent)";
       const lis = item.points
         .map((pt) => {
+          const liStyle = inlineStyle({
+            padding: "0.28rem 0",
+            fontSize: "0.84rem",
+            color: "var(--fg)",
+            lineHeight: "1.55",
+            display: "flex",
+            gap: "0.45rem",
+          });
           return elem(
             "li",
-            {
-              style: "padding:0.25rem 0;font-size:0.875rem;color:var(--fg)",
-            },
-            `&#x2022; ${escapeHtml(pt)}`,
+            { style: liStyle },
+            elem("span", { style: `color:${sanitizeCssValue(bulletColor)};font-weight:800;flex-shrink:0;line-height:1.55` }, "&#x203A;") +
+              elem("span", {}, escapeHtml(pt)),
           );
         })
         .join("\n");
@@ -599,7 +728,7 @@ function renderHeroStats(block: HeroStatsBlock, preset: StylePreset): string {
       const cardStyle = inlineStyle({
         borderRadius: preset.card.borderRadius,
         border: preset.card.border !== "none" ? preset.card.border : "1px solid var(--border)",
-        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : undefined,
+        boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : "var(--shadow-sm)",
         padding: "0",
         background: preset.card.background,
         overflow: "hidden",
@@ -608,8 +737,8 @@ function renderHeroStats(block: HeroStatsBlock, preset: StylePreset): string {
 
       // Colored top accent bar
       const accentBarStyle = inlineStyle({
-        height: "4px",
-        background: accentColor,
+        height: "5px",
+        background: `linear-gradient(to right, ${accentColor}, ${accentColor}80)`,
       });
 
       const innerStyle = inlineStyle({
@@ -617,16 +746,18 @@ function renderHeroStats(block: HeroStatsBlock, preset: StylePreset): string {
       });
 
       const valueStyle = inlineStyle({
-        fontSize: "2.5rem",
-        fontWeight: "800",
+        fontSize: "1.95rem",
+        fontWeight: "900",
         color: accentColor,
         lineHeight: "1.1",
+        letterSpacing: "-0.04em",
       });
 
       const labelStyle = inlineStyle({
-        fontSize: "0.85rem",
-        color: "var(--muted)",
-        marginTop: "0.375rem",
+        fontSize: "0.8rem",
+        color: "var(--fg)",
+        fontWeight: "600",
+        marginTop: "0.4rem",
       });
 
       let content = elem("div", { style: accentBarStyle }, "");
@@ -635,16 +766,91 @@ function renderHeroStats(block: HeroStatsBlock, preset: StylePreset): string {
 
       if (stat.subtitle) {
         const subStyle = inlineStyle({
-          fontSize: "0.8rem",
+          fontSize: "0.72rem",
           color: "var(--muted)",
           marginTop: "0.75rem",
           paddingTop: "0.75rem",
           borderTop: "1px solid var(--border)",
+          lineHeight: "1.4",
         });
         inner += elem("div", { style: subStyle }, escapeHtml(stat.subtitle));
       }
 
       content += elem("div", { style: innerStyle }, inner);
+
+      // Breakdown rows
+      if (stat.breakdown && stat.breakdown.length > 0) {
+        const breakdownStyle = inlineStyle({
+          padding: "0 1rem 1rem",
+        });
+        const dividerStyle = inlineStyle({
+          height: "1px",
+          background: "var(--border)",
+          margin: "0 0 0.625rem",
+        });
+
+        let breakdownHtml = elem("div", { style: dividerStyle }, "");
+
+        for (const row of stat.breakdown) {
+          const rowStyle = inlineStyle({
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: "0.5rem",
+            padding: "0.22rem 0",
+            fontSize: "0.76rem",
+            lineHeight: "1.4",
+            ...(row.struck ? { opacity: "0.5" } : {}),
+          });
+          const nameStyle = inlineStyle({
+            color: "var(--muted)",
+            flex: "1",
+            minWidth: "0",
+            textAlign: "left",
+          });
+          const amtStyle = inlineStyle({
+            color: row.struck ? "var(--muted)" : "var(--fg)",
+            fontWeight: "600",
+            whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
+            ...(row.struck ? { textDecoration: "line-through", textDecorationColor: "var(--border)" } : {}),
+          });
+          breakdownHtml += elem(
+            "div",
+            { style: rowStyle },
+            elem("span", { style: nameStyle }, escapeHtml(row.label)) +
+              elem("span", { style: amtStyle }, escapeHtml(row.value)),
+          );
+        }
+
+        if (stat.breakdownTotal) {
+          const parts = stat.breakdownTotal.split("|");
+          const totalLabel = parts.length > 1 ? parts[0].trim() : "合計";
+          const totalValue = parts.length > 1 ? parts[1].trim() : stat.breakdownTotal;
+
+          const totalStyle = inlineStyle({
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: "0.5rem",
+            padding: "0.5rem 0 0",
+            marginTop: "0.25rem",
+            borderTop: "1px solid var(--border)",
+            fontSize: "0.78rem",
+            fontWeight: "700",
+            color: "var(--fg)",
+          });
+          breakdownHtml += elem(
+            "div",
+            { style: totalStyle },
+            elem("span", {}, escapeHtml(totalLabel)) +
+              elem("span", { style: inlineStyle({ fontSize: "0.82rem" }) }, escapeHtml(totalValue)),
+          );
+        }
+
+        content += elem("div", { style: breakdownStyle }, breakdownHtml);
+      }
+
       return elem("div", { style: cardStyle }, content);
     })
     .join("\n");
@@ -700,14 +906,14 @@ function renderBadgeInline(text: string, variant: string): string {
   const colors = BADGE_COLORS[variant] ?? BADGE_COLORS.neutral;
   const style = inlineStyle({
     display: "inline-block",
-    fontSize: "0.7rem",
-    fontWeight: "600",
-    padding: "0.15rem 0.5rem",
+    fontSize: "0.6rem",
+    fontWeight: "800",
+    padding: "0.15rem 0.55rem",
     borderRadius: "9999px",
     background: colors.bg,
     color: colors.fg,
     textTransform: "uppercase",
-    letterSpacing: "0.03em",
+    letterSpacing: "0.05em",
   });
   return elem("span", { style }, escapeHtml(text));
 }

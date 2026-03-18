@@ -289,6 +289,7 @@ export function getComponentExamples(): string {
           date: "2024-06",
           title: "Enterprise Tier",
           status: "in_progress",
+          color: "var(--purple)",
         },
       ],
     },
@@ -320,7 +321,7 @@ export function getComponentExamples(): string {
         {
           title: "Pro Plan",
           points: ["Unlimited users", "100GB storage", "Priority support"],
-          highlight: true,
+          highlight: "purple",
         },
       ],
     },
@@ -343,9 +344,18 @@ export function getComponentExamples(): string {
     hero_stats: {
       type: "hero_stats",
       stats: [
-        { value: "55%", label: "Initial Load Speedup", subtitle: "0.81s → 0.36s", color: "var(--success)" },
+        {
+          value: "$4.2M",
+          label: "Total Revenue",
+          breakdown: [
+            { label: "Enterprise", value: "$2.5M" },
+            { label: "SMB", value: "$1.2M" },
+            { label: "Legacy (sunset)", value: "$500K", struck: true },
+          ],
+          breakdownTotal: "Total|$4.2M",
+        },
         { value: "37%", label: "Page Load Speedup", subtitle: "1.93s → 1.22s", color: "var(--success)" },
-        { value: "26%", label: "App Size Reduction", subtitle: "~44MB → ~33MB", color: "var(--accent)" },
+        { value: "26%", label: "App Size Reduction", subtitle: "~44MB → ~33MB", color: "var(--purple)" },
       ],
     },
     before_after: {
@@ -436,6 +446,7 @@ export function getComponentExamples(): string {
         subtitle: "Optional subtitle below the title",
         badge: "OPTIONAL BADGE",
         style: "mckinsey",
+        theme: "light",
         blocks: ["... array of block objects ..."],
       },
       null,

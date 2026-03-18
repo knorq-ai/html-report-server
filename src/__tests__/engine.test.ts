@@ -945,3 +945,241 @@ describe("getComponentExamples", () => {
     expect(result).toContain("mckinsey");
   });
 });
+
+// ---------------------------------------------------------------------------
+// New feature tests (v1.2)
+// ---------------------------------------------------------------------------
+
+describe("theme mode", () => {
+  it("forces light theme — no prefers-color-scheme media query", async () => {
+    const doc: ReportDocument = { ...sampleDoc, theme: "light" };
+    await renderReport(tmpFile, doc);
+    const content = await fs.readFile(tmpFile, "utf-8");
+    expect(content).not.toContain("prefers-color-scheme");
+    expect(content).toContain("--fg: #1f2328"); // light vars
+    expect(content).toContain("color-scheme: light");
+  });
+
+  it("forces dark theme — no prefers-color-scheme media query", async () => {
+    const doc: ReportDocument = { ...sampleDoc, theme: "dark" };
+    await renderReport(tmpFile, doc);
+    const content = await fs.readFile(tmpFile, "utf-8");
+    expect(content).not.toContain("prefers-color-scheme");
+    expect(content).toContain("--fg: #e6edf3"); // dark vars
+    expect(content).toContain("color-scheme: dark");
+  });
+
+  it("auto theme includes media query", async () => {
+    const doc: ReportDocument = { ...sampleDoc, theme: "auto" };
+    await renderReport(tmpFile, doc);
+    const content = await fs.readFile(tmpFile, "utf-8");
+    expect(content).toContain("prefers-color-scheme: dark");
+    expect(content).toContain("color-scheme: light dark");
+  });
+
+  it("omitted theme defaults to auto behavior", async () => {
+    await renderReport(tmpFile, sampleDoc);
+    const content = await fs.readFile(tmpFile, "utf-8");
+    expect(content).toContain("prefers-color-scheme: dark");
+  });
+});
+
+describe("section eyebrow badge", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders numbered title as eyebrow pill badge", () => {
+    const html = renderBlock(
+      { type: "section", title: "01 · PROBLEM", subtitle: "課題の概要" },
+      preset,
+    );
+    // Eyebrow should contain the full title in a badge
+    expect(html).toContain("01 · PROBLEM");
+    // Subtitle promoted to h2
+    expect(html).toContain("<h2");
+    expect(html).toContain("課題の概要");
+  });
+
+  it("falls back to original style for non-numbered titles", () => {
+    const html = renderBlock(
+      { type: "section", title: "Overview" },
+      preset,
+    );
+    expect(html).not.toContain("<h2");
+    expect(html).toContain("Overview");
+  });
+
+  it("only adds rule for eyebrow or when preset has border", () => {
+    const cleanPreset = resolvePreset("clean"); // borderBottom: "none"
+    const html = renderBlock(
+      { type: "section", title: "No Number" },
+      cleanPreset,
+    );
+    // Clean preset has borderBottom: "none", no rule should appear
+    expect(html).not.toContain('height:1px');
+  });
+});
+
+describe("callout variant backgrounds", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("uses warning-light background for warning callout", () => {
+    const html = renderBlock(
+      { type: "callout", variant: "warning", text: "test" },
+      preset,
+    );
+    expect(html).toContain("var(--warning-light)");
+    expect(html).toContain("var(--warning)"); // border accent
+  });
+
+  it("uses success-light background for success callout", () => {
+    const html = renderBlock(
+      { type: "callout", variant: "success", text: "test" },
+      preset,
+    );
+    expect(html).toContain("var(--success-light)");
+  });
+});
+
+describe("timeline entry colors", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("uses custom color for dot and date", () => {
+    const html = renderBlock(
+      {
+        type: "timeline",
+        entries: [{ date: "W1", title: "Task", color: "var(--success)" }],
+      },
+      preset,
+    );
+    expect(html).toContain("var(--success)");
+  });
+
+  it("defaults to accent color when no color specified", () => {
+    const html = renderBlock(
+      {
+        type: "timeline",
+        entries: [{ date: "W1", title: "Task" }],
+      },
+      preset,
+    );
+    expect(html).toContain("var(--accent)");
+  });
+
+  it("sanitizes user-supplied color values", () => {
+    const html = renderBlock(
+      {
+        type: "timeline",
+        entries: [{ date: "W1", title: "Task", color: 'red"; onclick="alert(1)' }],
+      },
+      preset,
+    );
+    expect(html).not.toContain('onclick="alert');
+  });
+});
+
+describe("comparison highlight colors", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("supports string highlight 'purple'", () => {
+    const html = renderBlock(
+      {
+        type: "comparison",
+        items: [{ title: "A", points: ["x"], highlight: "purple" }],
+      },
+      preset,
+    );
+    expect(html).toContain("var(--purple)");
+    expect(html).toContain("var(--purple-light)"); // background
+  });
+
+  it("supports boolean highlight (backwards compat)", () => {
+    const html = renderBlock(
+      {
+        type: "comparison",
+        items: [{ title: "A", points: ["x"], highlight: true }],
+      },
+      preset,
+    );
+    expect(html).toContain("var(--accent)");
+  });
+
+  it("renders plain border when highlight is false", () => {
+    const html = renderBlock(
+      {
+        type: "comparison",
+        items: [{ title: "A", points: ["x"], highlight: false }],
+      },
+      preset,
+    );
+    expect(html).not.toContain("var(--accent-light)");
+    expect(html).not.toContain("var(--purple)");
+  });
+});
+
+describe("hero stats breakdown", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders breakdown rows", () => {
+    const html = renderBlock(
+      {
+        type: "hero_stats",
+        stats: [{
+          value: "$4.2M",
+          label: "Revenue",
+          breakdown: [
+            { label: "Enterprise", value: "$2.5M" },
+            { label: "Legacy", value: "$500K", struck: true },
+          ],
+          breakdownTotal: "Total|$4.2M",
+        }],
+      },
+      preset,
+    );
+    expect(html).toContain("Enterprise");
+    expect(html).toContain("$2.5M");
+    expect(html).toContain("line-through"); // struck item
+    expect(html).toContain("Total");
+    expect(html).toContain("$4.2M");
+  });
+
+  it("handles breakdownTotal without pipe (label defaults to 合計)", () => {
+    const html = renderBlock(
+      {
+        type: "hero_stats",
+        stats: [{
+          value: "100",
+          label: "Count",
+          breakdown: [{ label: "A", value: "100" }],
+          breakdownTotal: "$100",
+        }],
+      },
+      preset,
+    );
+    expect(html).toContain("合計");
+    expect(html).toContain("$100");
+  });
+
+  it("skips breakdown section when breakdown is empty", () => {
+    const html = renderBlock(
+      {
+        type: "hero_stats",
+        stats: [{ value: "42", label: "Simple", breakdown: [] }],
+      },
+      preset,
+    );
+    // No breakdown divider rendered
+    expect(html).not.toContain("0 0 0.625rem");
+  });
+
+  it("renders without breakdown (backwards compat)", () => {
+    const html = renderBlock(
+      {
+        type: "hero_stats",
+        stats: [{ value: "42", label: "Simple" }],
+      },
+      preset,
+    );
+    expect(html).toContain("42");
+    expect(html).toContain("Simple");
+  });
+});

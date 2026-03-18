@@ -9,7 +9,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { ErrorCode, EngineError } from "./errors.js";
-import type { ReportDocument } from "./types.js";
+import type { ReportDocument, ThemeMode } from "./types.js";
 
 const JSON_COMMENT_PREFIX = "<!-- REPORT_JSON: ";
 const JSON_COMMENT_SUFFIX = " -->";
@@ -37,7 +37,7 @@ export async function writeHtmlFile(
   }
 
   const jsonComment = embedJsonComment(doc);
-  const content = htmlShell(doc.title, jsonComment + "\n" + bodyHtml);
+  const content = htmlShell(doc.title, jsonComment + "\n" + bodyHtml, doc.theme);
 
   try {
     await fs.writeFile(filePath, content, "utf-8");
@@ -55,8 +55,72 @@ export async function writeHtmlFile(
  * Provides light/dark theme support via prefers-color-scheme and
  * defines all CSS variables that component renderers depend on.
  */
-function htmlShell(title: string, body: string): string {
+// ---------------------------------------------------------------------------
+// CSS variable definitions for light and dark themes
+// ---------------------------------------------------------------------------
+
+const LIGHT_VARS = `
+  --fg: #1f2328;
+  --bg: #ffffff;
+  --bg-subtle: #eef2f7;
+  --muted: #656d76;
+  --border: #d1d9e0;
+  --code-bg: #f6f8fa;
+  --accent: #0969da;
+  --accent-light: #dbeafe;
+  --success: #1a7f37;
+  --success-light: #dcfce7;
+  --warning: #9a6700;
+  --warning-light: #fef3c7;
+  --danger: #d1242f;
+  --danger-light: #fee2e2;
+  --info: #0891b2;
+  --info-light: #ecfeff;
+  --purple: #6f42c1;
+  --purple-light: #ede9fe;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);`;
+
+const DARK_VARS = `
+  --fg: #e6edf3;
+  --bg: #0d1117;
+  --bg-subtle: #0b0f19;
+  --muted: #8b949e;
+  --border: #30363d;
+  --code-bg: #161b22;
+  --accent: #4493f8;
+  --accent-light: #1e3a5f;
+  --success: #3fb950;
+  --success-light: #14332a;
+  --warning: #d29922;
+  --warning-light: #332b14;
+  --danger: #f85149;
+  --danger-light: #331414;
+  --info: #22d3ee;
+  --info-light: #164e63;
+  --purple: #a78bfa;
+  --purple-light: #2d2150;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.4);`;
+
+function buildThemeCss(theme?: ThemeMode): string {
+  if (theme === "light") {
+    // Force light — no media query
+    return `:root {${LIGHT_VARS}\n}`;
+  }
+  if (theme === "dark") {
+    // Force dark — no media query
+    return `:root {${DARK_VARS}\n}`;
+  }
+  // Auto (default) — light base + dark media query
+  return `:root {${LIGHT_VARS}\n}\n@media (prefers-color-scheme: dark) {\n  :root {${DARK_VARS}\n  }\n}`;
+}
+
+function htmlShell(title: string, body: string, theme?: ThemeMode): string {
   const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const colorScheme = theme === "light" ? "light" : theme === "dark" ? "dark" : "light dark";
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -64,32 +128,9 @@ function htmlShell(title: string, body: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${safeTitle}</title>
 <style>
-:root {
-  --fg: #1f2328;
-  --bg: #ffffff;
-  --muted: #656d76;
-  --border: #d1d9e0;
-  --code-bg: #f6f8fa;
-  --accent: #0969da;
-  --success: #1a7f37;
-  --warning: #9a6700;
-  --danger: #d1242f;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fg: #e6edf3;
-    --bg: #0d1117;
-    --muted: #8b949e;
-    --border: #30363d;
-    --code-bg: #161b22;
-    --accent: #4493f8;
-    --success: #3fb950;
-    --warning: #d29922;
-    --danger: #f85149;
-  }
-}
+${buildThemeCss(theme)}
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); }
+body { margin: 0; background: var(--bg-subtle); -webkit-font-smoothing: antialiased; color-scheme: ${colorScheme}; }
 </style>
 </head>
 <body>

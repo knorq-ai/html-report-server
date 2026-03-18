@@ -101,6 +101,7 @@ const timelineEntrySchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   status: z.string().optional(),
+  color: z.string().optional().describe('Dot/date color, e.g. "var(--success)" or "var(--purple)"'),
 });
 
 const cardGridCardSchema = z.object({
@@ -115,7 +116,7 @@ const cardGridCardSchema = z.object({
 const comparisonItemSchema = z.object({
   title: z.string(),
   points: z.array(z.string()),
-  highlight: z.boolean().optional(),
+  highlight: z.union([z.boolean(), z.string()]).optional().describe('true for accent blue, or "accent"|"purple"|"success"|"warning"|"danger"'),
 });
 
 const badgeItemSchema = z.object({
@@ -230,6 +231,12 @@ const blockSchema = z.discriminatedUnion("type", [
         label: z.string(),
         subtitle: z.string().optional(),
         color: z.string().optional(),
+        breakdown: z.array(z.object({
+          label: z.string(),
+          value: z.string(),
+          struck: z.boolean().optional().describe("Render with strikethrough (e.g. already contracted)"),
+        })).optional().describe("Line-item breakdown rows"),
+        breakdownTotal: z.string().optional().describe('Total row, format "label|value" or just "value"'),
       }),
     ),
   }),
@@ -335,19 +342,23 @@ server.tool(
     subtitle: z.string().optional().describe("Subtitle shown below the title"),
     badge: z.string().optional().describe('Badge shown next to the title (e.g. "PERFORMANCE REPORT")'),
     style: styleNameSchema,
+    theme: z.enum(["auto", "light", "dark"]).optional().describe(
+      'Color theme. "auto" (default): follows browser/OS preference. "light": always light. "dark": always dark.',
+    ),
     style_overrides: styleOverridesSchema,
     blocks: z
       .array(blockSchema)
       .max(500)
       .describe("Array of block objects (max 500). Call get_component_examples for the full DSL reference."),
   },
-  async ({ file_path, title, subtitle, badge, style, style_overrides, blocks }) => {
+  async ({ file_path, title, subtitle, badge, style, theme, style_overrides, blocks }) => {
     try {
       const doc: ReportDocument = {
         title,
         subtitle,
         badge,
         style,
+        theme,
         styleOverrides: style_overrides,
         blocks: blocks as ReportDocument["blocks"],
       };

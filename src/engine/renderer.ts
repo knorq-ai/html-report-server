@@ -20,46 +20,65 @@ import { escapeHtml, elem } from "./html-utils.js";
 export function renderDocument(doc: ReportDocument): string {
   const preset = resolvePreset(doc.style, doc.styleOverrides);
 
-  const wrapperStyle = inlineStyle({
+  const fontFamily =
+    "-apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Segoe UI', Helvetica, Arial, sans-serif";
+
+  // ── Outer page wrapper (white card on subtle gray background) ──
+  const pageStyle = inlineStyle({
     maxWidth: preset.maxWidth,
-    margin: "0 auto",
-    padding: "2rem 1.5rem",
-    fontFamily:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+    margin: "2rem auto",
+    background: "var(--bg)",
+    borderRadius: "16px",
+    boxShadow: "var(--shadow-lg)",
+    overflow: "hidden",
+    fontFamily,
     color: "var(--fg)",
     lineHeight: "1.6",
   });
 
+  // ── Hero header (dark gradient) ──
+  const heroStyle = inlineStyle({
+    background: "linear-gradient(135deg, #0c1a2e 0%, #14325a 55%, #1d4ed8 100%)",
+    padding: "2.75rem 2.75rem 2.25rem",
+    position: "relative",
+    overflow: "hidden",
+  });
+
+  let heroContent = "";
+
   // Title row (with optional badge)
-  let body: string;
   if (doc.badge) {
     const titleRowStyle = inlineStyle({
       display: "flex",
       justifyContent: "space-between",
       alignItems: "flex-start",
       gap: "1rem",
-      marginBottom: "0.25rem",
+      marginBottom: "0.5rem",
     });
     const titleStyle = inlineStyle({
-      fontSize: "1.75rem",
-      fontWeight: "700",
-      color: "var(--fg)",
-      lineHeight: "1.3",
+      fontSize: "1.9rem",
+      fontWeight: "800",
+      color: "#fff",
+      letterSpacing: "-0.025em",
+      lineHeight: "1.2",
     });
     const badgeStyle = inlineStyle({
-      display: "inline-block",
-      fontSize: "0.7rem",
-      fontWeight: "700",
-      padding: "0.4rem 1rem",
+      display: "inline-flex",
+      alignItems: "center",
+      fontSize: "0.6rem",
+      fontWeight: "800",
+      padding: "0.35rem 0.9rem",
       borderRadius: "6px",
-      background: "var(--accent)",
-      color: "#fff",
+      background: "rgba(255,255,255,0.12)",
+      color: "rgba(255,255,255,0.85)",
       textTransform: "uppercase",
-      letterSpacing: "0.06em",
+      letterSpacing: "0.1em",
       whiteSpace: "nowrap",
-      marginTop: "0.25rem",
+      border: "1px solid rgba(255,255,255,0.2)",
+      flexShrink: "0",
+      marginTop: "0.35rem",
     });
-    body = elem(
+    heroContent = elem(
       "div",
       { style: titleRowStyle },
       elem("h1", { style: titleStyle }, escapeHtml(doc.title)) +
@@ -67,32 +86,41 @@ export function renderDocument(doc: ReportDocument): string {
     );
   } else {
     const titleStyle = inlineStyle({
-      fontSize: "1.75rem",
-      fontWeight: "700",
-      color: "var(--fg)",
+      fontSize: "1.9rem",
+      fontWeight: "800",
+      color: "#fff",
+      letterSpacing: "-0.025em",
+      lineHeight: "1.2",
       marginBottom: "0.5rem",
-      lineHeight: "1.3",
     });
-    body = elem("h1", { style: titleStyle }, escapeHtml(doc.title));
+    heroContent = elem("h1", { style: titleStyle }, escapeHtml(doc.title));
   }
 
   // Subtitle
   if (doc.subtitle) {
     const subtitleStyle = inlineStyle({
-      fontSize: "1.1rem",
-      color: "var(--muted)",
-      marginBottom: "0.75rem",
-      lineHeight: "1.4",
+      fontSize: "0.875rem",
+      color: "rgba(255,255,255,0.55)",
+      marginBottom: "0.5rem",
     });
-    body += elem("div", { style: subtitleStyle }, escapeHtml(doc.subtitle));
+    heroContent += elem("div", { style: subtitleStyle }, escapeHtml(doc.subtitle));
   }
 
-  // Render each block
+  const hero = elem("div", { style: heroStyle }, heroContent);
+
+  // ── Body section ──
+  const bodyStyle = inlineStyle({
+    padding: "2.5rem 2.75rem 3.5rem",
+  });
+
+  let bodyContent = "";
   for (const block of doc.blocks) {
-    body += "\n" + renderBlock(block, preset);
+    bodyContent += "\n" + renderBlock(block, preset);
   }
 
-  return elem("div", { style: wrapperStyle }, body);
+  const body = elem("div", { style: bodyStyle }, bodyContent);
+
+  return elem("div", { style: pageStyle }, hero + body);
 }
 
 /**
