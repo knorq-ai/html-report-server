@@ -975,122 +975,90 @@ function renderBeforeAfter(
       // Shared label width
       const labelWidth = "120px";
 
-      // Bar row builder
+      // Scale both bars relative to the larger value
       const beforeValue = item.before.value;
       const afterValue = item.after.value;
-      const ratio = beforeValue === 0 ? 100 : (afterValue / beforeValue) * 100;
+      const maxValue = Math.max(Math.abs(beforeValue), Math.abs(afterValue), 1);
+      const beforePct = (Math.abs(beforeValue) / maxValue) * 100;
+      const afterPct = (Math.abs(afterValue) / maxValue) * 100;
 
-      // Before bar (100% width)
-      const beforeRowStyle = inlineStyle({
-        display: "flex",
-        alignItems: "center",
-        marginBottom: "0.5rem",
-      });
-
-      const beforeLabelStyle = inlineStyle({
-        width: labelWidth,
-        minWidth: labelWidth,
-        textAlign: "right",
-        paddingRight: "0.75rem",
-        fontSize: "0.8rem",
-        color: "var(--muted)",
-      });
-
-      const beforeBarWrapperStyle = inlineStyle({
-        flex: "1",
-        display: "flex",
-        alignItems: "center",
-      });
-
-      const beforeBarStyle = inlineStyle({
-        width: "100%",
-        height: "28px",
-        background: "var(--border)",
-        borderRadius: "4px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        paddingRight: "0.5rem",
-      });
-
-      const beforeValueStyle = inlineStyle({
-        fontWeight: "600",
-        fontSize: "0.85rem",
-        color: "var(--fg)",
-      });
-
-      const beforeUnit = item.before.unit ?? "";
-      const beforeValueText = `${item.before.value}${escapeHtml(beforeUnit)}`;
-
-      const beforeRow = elem(
-        "div",
-        { style: beforeRowStyle },
-        elem("div", { style: beforeLabelStyle }, escapeHtml(item.before.label)) +
-          elem(
-            "div",
-            { style: beforeBarWrapperStyle },
+      // Helper to build a bar row
+      const buildRow = (
+        label: string,
+        value: number,
+        unit: string,
+        widthPct: number,
+        barBg: string,
+        valueFg: string,
+        marginBottom?: string,
+      ) => {
+        const rowStyle = inlineStyle({
+          display: "flex",
+          alignItems: "center",
+          marginBottom,
+        });
+        const lblStyle = inlineStyle({
+          width: labelWidth,
+          minWidth: labelWidth,
+          textAlign: "right",
+          paddingRight: "0.75rem",
+          fontSize: "0.8rem",
+          color: "var(--muted)",
+        });
+        const wrapStyle = inlineStyle({
+          flex: "1",
+          display: "flex",
+          alignItems: "center",
+        });
+        const barStyle = inlineStyle({
+          width: `${Math.max(widthPct, 6)}%`,
+          height: "28px",
+          background: barBg,
+          borderRadius: "4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          paddingRight: "0.5rem",
+        });
+        const valStyle = inlineStyle({
+          fontWeight: "600",
+          fontSize: "0.85rem",
+          color: valueFg,
+        });
+        const valText = `${value}${escapeHtml(unit)}`;
+        return elem(
+          "div",
+          { style: rowStyle },
+          elem("div", { style: lblStyle }, escapeHtml(label)) +
             elem(
               "div",
-              { style: beforeBarStyle },
-              elem("span", { style: beforeValueStyle }, beforeValueText),
+              { style: wrapStyle },
+              elem(
+                "div",
+                { style: barStyle },
+                elem("span", { style: valStyle }, valText),
+              ),
             ),
-          ),
+        );
+      };
+
+      const beforeRow = buildRow(
+        item.before.label,
+        item.before.value,
+        item.before.unit ?? "",
+        beforePct,
+        "var(--border)",
+        "var(--fg)",
+        "0.5rem",
       );
 
-      // After bar (proportional width)
-      const afterRowStyle = inlineStyle({
-        display: "flex",
-        alignItems: "center",
-      });
-
-      const afterLabelStyle = inlineStyle({
-        width: labelWidth,
-        minWidth: labelWidth,
-        textAlign: "right",
-        paddingRight: "0.75rem",
-        fontSize: "0.8rem",
-        color: "var(--muted)",
-      });
-
-      const afterBarWrapperStyle = inlineStyle({
-        flex: "1",
-        display: "flex",
-        alignItems: "center",
-      });
-
-      const afterBarStyle = inlineStyle({
-        width: `${Math.min(ratio, 100)}%`,
-        height: "28px",
-        background: "linear-gradient(90deg, var(--success), #86efac)",
-        borderRadius: "4px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        paddingRight: "0.5rem",
-      });
-
-      const afterValueStyle = inlineStyle({
-        fontWeight: "600",
-        fontSize: "0.85rem",
-        color: "var(--success)",
-      });
-
-      const afterUnit = item.after.unit ?? "";
-      const afterValueText = `${item.after.value}${escapeHtml(afterUnit)}`;
-
-      const afterRow = elem(
-        "div",
-        { style: afterRowStyle },
-        elem("div", { style: afterLabelStyle }, escapeHtml(item.after.label)) +
-          elem(
-            "div",
-            { style: afterBarWrapperStyle },
-            elem(
-              "div",
-              { style: afterBarStyle },
-              elem("span", { style: afterValueStyle }, afterValueText),
-            ),
-          ),
+      const afterRow = buildRow(
+        item.after.label,
+        item.after.value,
+        item.after.unit ?? "",
+        afterPct,
+        "linear-gradient(90deg, var(--success), #86efac)",
+        "var(--success)",
       );
 
       return elem("div", { style: cardStyle }, header + beforeRow + afterRow);
@@ -1113,7 +1081,7 @@ function renderSteps(block: StepsBlock, preset: StylePreset): string {
     display: "flex",
     alignItems: "center",
     gap: "0.75rem",
-    flexWrap: "wrap",
+    overflowX: "auto",
     marginBottom: preset.blockGap,
   });
 
@@ -1135,8 +1103,7 @@ function renderSteps(block: StepsBlock, preset: StylePreset): string {
 
       // Step card
       const cardStyle = inlineStyle({
-        flex: "1 1 160px",
-        maxWidth: "240px",
+        flex: "1 0 140px",
         borderRadius: preset.card.borderRadius,
         border: preset.card.border !== "none" ? preset.card.border : undefined,
         boxShadow: preset.card.boxShadow !== "none" ? preset.card.boxShadow : undefined,

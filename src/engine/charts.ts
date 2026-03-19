@@ -340,11 +340,13 @@ export function renderPieChart(
   if (data.length === 0) return "";
 
   const palette = preset.chart.palette;
-  const size = 300;
-  const cx = size / 2;
+  const labelPad = 90; // horizontal padding for outer labels
+  const pieArea = 300;
+  const svgWidth = pieArea + labelPad * 2;
+  const cx = svgWidth / 2;
   const titleOffset = title ? 20 : 0;
-  const cy = size / 2 + titleOffset / 2;
-  const outerR = (size - 80) / 2;
+  const cy = pieArea / 2 + titleOffset / 2;
+  const outerR = (pieArea - 80) / 2;
   const innerR = donut ? outerR * 0.55 : 0;
 
   const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -408,8 +410,8 @@ export function renderPieChart(
     angle = endAngle;
   });
 
-  const svgHeight = size + titleOffset;
-  const svg = `<svg viewBox="0 0 ${size} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" ` +
+  const svgHeight = pieArea + titleOffset;
+  const svg = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" ` +
     `role="img" aria-label="${escapeHtml(title ?? "Pie chart")}">\n${parts.join("\n")}\n</svg>`;
 
   return wrapChart(svg, preset);
