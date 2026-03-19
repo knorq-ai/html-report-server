@@ -242,6 +242,15 @@ export function getComponentExamples(): string {
       title: "User Growth",
       series: [
         {
+          name: "DAU",
+          data: [
+            { x: "Q1", y: 1200 },
+            { x: "Q2", y: 1600 },
+            { x: "Q3", y: 2000 },
+            { x: "Q4", y: 2400 },
+          ],
+        },
+        {
           name: "MAU",
           data: [
             { x: "Q1", y: 8200 },
@@ -251,7 +260,7 @@ export function getComponentExamples(): string {
           ],
         },
       ],
-      unit: "users",
+      dualAxis: true,
     },
     pie_chart: {
       type: "pie_chart",

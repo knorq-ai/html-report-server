@@ -88,6 +88,8 @@ export interface LineChartBlock {
   title?: string;
   series: LineSeries[];
   unit?: string;
+  /** When true and there are 2 series, use independent Y-axes (left + right). */
+  dualAxis?: boolean;
 }
 
 export interface PieChartBlock {

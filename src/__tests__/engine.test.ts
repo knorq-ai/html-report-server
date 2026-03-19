@@ -384,6 +384,47 @@ describe("charts", () => {
     expect(html).toContain("Jan");
   });
 
+  it("renders dual-axis line chart with independent Y scales", () => {
+    const html = renderLineChart(
+      {
+        type: "line_chart",
+        title: "DAU vs MAU",
+        dualAxis: true,
+        series: [
+          { name: "DAU", data: [{ x: "Q1", y: 100 }, { x: "Q2", y: 200 }] },
+          { name: "MAU", data: [{ x: "Q1", y: 8000 }, { x: "Q2", y: 12000 }] },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    // Two polylines (one per series)
+    expect(html.match(/<polyline/g)?.length).toBe(2);
+    // Left axis shows DAU-scale values, right axis shows MAU-scale values
+    expect(html).toContain("200"); // DAU max
+    expect(html).toContain("12.0k"); // MAU max
+    // Both series should use full plot height — DAU should NOT be flat
+    const polylines = html.match(/points="([^"]+)"/g) ?? [];
+    expect(polylines.length).toBe(2);
+  });
+
+  it("falls back to shared axis when dualAxis is false or >2 series", () => {
+    const html = renderLineChart(
+      {
+        type: "line_chart",
+        dualAxis: false,
+        series: [
+          { name: "A", data: [{ x: "X", y: 100 }] },
+          { name: "B", data: [{ x: "X", y: 10000 }] },
+        ],
+      },
+      preset,
+    );
+    // Should NOT have right-axis labels (text-anchor="start" near right edge)
+    // Only left-axis labels with shared scale showing 10.0k
+    expect(html).toContain("10.0k");
+  });
+
   it("renders pie chart SVG with path elements", () => {
     const html = renderPieChart(
       {

@@ -201,35 +201,46 @@ export function renderLineChart(
   block: LineChartBlock,
   preset: StylePreset,
 ): string {
-  const { series, title, unit } = block;
+  const { series, title, unit, dualAxis } = block;
   if (series.length === 0) return "";
 
   const palette = preset.chart.palette;
   const height = preset.chart.height;
-  const width = 600;
+  const useDual = dualAxis === true && series.length === 2;
+  const rightAxisWidth = useDual ? 50 : 0;
+  const width = 600 + rightAxisWidth;
 
   const plotLeft = CHART_PADDING.left;
-  const plotRight = width - CHART_PADDING.right;
+  const plotRight = width - CHART_PADDING.right - rightAxisWidth;
   const plotTop = title ? CHART_PADDING.top + 20 : CHART_PADDING.top;
   const plotBottom = height - CHART_PADDING.bottom;
   const plotWidth = plotRight - plotLeft;
   const plotHeight = plotBottom - plotTop;
 
-  // Collect all y-values to find the range
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const s of series) {
+  // Per-series Y ranges (used for dual-axis; shared range used otherwise)
+  const ranges = series.map((s) => {
+    let min = Infinity;
+    let max = -Infinity;
     for (const p of s.data) {
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
+      if (p.y < min) min = p.y;
+      if (p.y > max) max = p.y;
     }
-  }
-  if (minY === maxY) {
-    minY -= 1;
-    maxY += 1;
-  }
+    if (min === max) { min -= 1; max += 1; }
+    return { min, max };
+  });
 
-  // Use all x labels from the first series (or longest series)
+  // Shared range (union of all series)
+  const sharedMin = Math.min(...ranges.map((r) => r.min));
+  const sharedMax = Math.max(...ranges.map((r) => r.max));
+  const sharedRange = { min: sharedMin, max: sharedMax };
+
+  /** Map a y-value to plot y-coordinate for the given series index. */
+  const yToPlot = (yVal: number, si: number): number => {
+    const r = useDual ? ranges[si] : sharedRange;
+    return plotTop + plotHeight - ((yVal - r.min) / (r.max - r.min)) * plotHeight;
+  };
+
+  // Use all x labels from the longest series
   const longestSeries = series.reduce(
     (a, b) => (a.data.length >= b.data.length ? a : b),
     series[0],
@@ -242,25 +253,43 @@ export function renderLineChart(
   // Title
   if (title) {
     parts.push(
-      `<text x="${width / 2}" y="${CHART_PADDING.top}" ` +
+      `<text x="${(plotLeft + plotRight) / 2}" y="${CHART_PADDING.top}" ` +
         `text-anchor="middle" font-size="${TITLE_FONT_SIZE}" ` +
         `font-weight="600" fill="var(--fg)">${escapeHtml(title)}</text>`,
     );
   }
 
-  // Grid lines
+  // Grid lines + left Y-axis labels
+  const leftRange = useDual ? ranges[0] : sharedRange;
+  const leftColor = useDual ? palette[0] : preset.chart.labelColor;
   for (let i = 0; i <= 4; i++) {
     const y = plotTop + (plotHeight * i) / 4;
-    const val = maxY - (maxY - minY) * (i / 4);
+    const val = leftRange.max - (leftRange.max - leftRange.min) * (i / 4);
     parts.push(
       `<line x1="${plotLeft}" y1="${y}" x2="${plotRight}" y2="${y}" ` +
         `stroke="${preset.chart.gridColor}" stroke-width="0.5" />`,
     );
     parts.push(
       `<text x="${plotLeft - 8}" y="${y + 4}" text-anchor="end" ` +
-        `font-size="${LABEL_FONT_SIZE}" fill="${preset.chart.labelColor}">` +
+        `font-size="${LABEL_FONT_SIZE}" fill="${leftColor}">` +
         `${formatNumber(val)}${unit ? " " + escapeHtml(unit) : ""}</text>`,
     );
+  }
+
+  // Right Y-axis labels (dual-axis only)
+  if (useDual) {
+    const rightRange = ranges[1];
+    const rightColor = palette[1];
+    const rightX = plotRight + 8;
+    for (let i = 0; i <= 4; i++) {
+      const y = plotTop + (plotHeight * i) / 4;
+      const val = rightRange.max - (rightRange.max - rightRange.min) * (i / 4);
+      parts.push(
+        `<text x="${rightX}" y="${y + 4}" text-anchor="start" ` +
+          `font-size="${LABEL_FONT_SIZE}" fill="${rightColor}">` +
+          `${formatNumber(val)}${unit ? " " + escapeHtml(unit) : ""}</text>`,
+      );
+    }
   }
 
   // X labels
@@ -282,7 +311,7 @@ export function renderLineChart(
       const x = s.data.length > 1
         ? plotLeft + (plotWidth * pi) / (s.data.length - 1)
         : plotLeft + plotWidth / 2;
-      const y = plotTop + plotHeight - ((p.y - minY) / (maxY - minY)) * plotHeight;
+      const y = yToPlot(p.y, si);
       return `${x},${y}`;
     });
 
@@ -297,7 +326,7 @@ export function renderLineChart(
       const x = s.data.length > 1
         ? plotLeft + (plotWidth * pi) / (s.data.length - 1)
         : plotLeft + plotWidth / 2;
-      const y = plotTop + plotHeight - ((p.y - minY) / (maxY - minY)) * plotHeight;
+      const y = yToPlot(p.y, si);
       parts.push(
         `<circle cx="${x}" cy="${y}" r="3" fill="${color}" />`,
       );

@@ -203,6 +203,7 @@ const blockSchema = z.discriminatedUnion("type", [
     title: z.string().optional(),
     series: z.array(lineSeriesSchema).max(20),
     unit: z.string().optional(),
+    dualAxis: z.boolean().optional().describe("When true and there are 2 series, use independent left/right Y-axes for each series"),
   }),
   z.object({
     type: z.literal("pie_chart"),
