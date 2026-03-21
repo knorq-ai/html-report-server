@@ -7,6 +7,7 @@
  *   renderReport()         — JSON → HTML file
  *   readReport()           — HTML file → JSON structure
  *   editReport()           — Apply patch operations to an existing report
+ *   analyzeHtml()          — Describe any HTML file's structure for LLM consumption
  *   getComponentExamples() — Return DSL examples for each block type
  */
 
@@ -21,6 +22,7 @@ import type {
   StyleName,
 } from "./engine/types.js";
 import { ErrorCode, EngineError } from "./engine/errors.js";
+import { analyzeHtmlContent } from "./engine/analyzer.js";
 
 export { EngineError } from "./engine/errors.js";
 export type { ReportDocument, Block, EditOp, StyleName } from "./engine/types.js";
@@ -179,6 +181,53 @@ export async function editReport(
       `Result: ${blocks.length} blocks total`,
     ].join("\n");
   });
+}
+
+// ---------------------------------------------------------------------------
+// analyze_html
+// ---------------------------------------------------------------------------
+
+/**
+ * Analyze any HTML file and return a token-efficient structural description.
+ *
+ * Works with arbitrary HTML — not limited to files created by this MCP.
+ * For files with embedded REPORT_JSON, returns a summary and directs the
+ * caller to use read_report for the exact DSL.
+ */
+export async function analyzeHtml(
+  filePath?: string,
+  htmlContent?: string,
+): Promise<string> {
+  if (!filePath && !htmlContent) {
+    throw new EngineError(
+      ErrorCode.INVALID_PARAMETER,
+      "Either file_path or html_content must be provided.",
+    );
+  }
+  if (filePath && htmlContent) {
+    throw new EngineError(
+      ErrorCode.INVALID_PARAMETER,
+      "Provide either file_path or html_content, not both.",
+    );
+  }
+
+  let html: string;
+  if (filePath) {
+    const fs = await import("fs/promises");
+    try {
+      html = await fs.readFile(filePath, "utf-8");
+    } catch (e: unknown) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code === "ENOENT") {
+        throw new EngineError(ErrorCode.FILE_NOT_FOUND, `File not found: ${filePath}`);
+      }
+      throw new EngineError(ErrorCode.FILE_READ_ERROR, `Failed to read file: ${err.message}`);
+    }
+  } else {
+    html = htmlContent!;
+  }
+
+  return analyzeHtmlContent(html);
 }
 
 // ---------------------------------------------------------------------------

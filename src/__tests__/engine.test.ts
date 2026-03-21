@@ -1224,3 +1224,90 @@ describe("hero stats breakdown", () => {
     expect(html).toContain("Simple");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Analyzer tests
+// ---------------------------------------------------------------------------
+
+import { analyzeHtmlContent } from "../engine/analyzer.js";
+
+describe("analyzeHtmlContent", () => {
+  it("detects embedded REPORT_JSON and takes fast path", async () => {
+    // Render a report, then analyze the output
+    await renderReport(tmpFile, sampleDoc);
+    const html = await fs.readFile(tmpFile, "utf-8");
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain("html-report-server (embedded JSON detected)");
+    expect(result).toContain("Q4 Performance Report");
+    expect(result).toContain("read_report");
+    expect(result).toContain("Blocks: 8");
+  });
+
+  it("analyzes external HTML with table detection", () => {
+    const html = `<html><body>
+      <h1>Report</h1>
+      <table><thead><tr><th>Name</th><th>Value</th></tr></thead>
+      <tbody><tr><td>Revenue</td><td>$4.2M</td></tr></tbody></table>
+    </body></html>`;
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain("external HTML");
+    expect(result).toContain("Report");
+    expect(result).toContain("table: 2 cols × 1 rows (Name | Value)");
+    expect(result).toContain("Revenue | $4.2M");
+  });
+
+  it("detects headings, paragraphs, and lists", () => {
+    const html = `<html><body>
+      <h2>Section</h2>
+      <p>Some paragraph text here.</p>
+      <ul><li>Item A</li><li>Item B</li></ul>
+    </body></html>`;
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain('heading (h2): "Section"');
+    expect(result).toContain('paragraph: "Some paragraph text here."');
+    expect(result).toContain("list: 2 items");
+    expect(result).toContain("Item A");
+  });
+
+  it("detects callout with warning variant", () => {
+    const html = `<html><body>
+      <div style="border-left: 4px solid #e67e22; padding: 1rem;">
+        <strong>Warning</strong>
+        <p>Something went wrong</p>
+      </div>
+    </body></html>`;
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain("callout (warning)");
+  });
+
+  it("detects dividers", () => {
+    const html = `<html><body><hr><p>After divider</p></body></html>`;
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain("divider");
+    expect(result).toContain("After divider");
+  });
+
+  it("detects grid layouts", () => {
+    const html = `<html><body>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+        <div><h3>Card A</h3><p>Body A</p></div>
+        <div><h3>Card B</h3><p>Body B</p></div>
+      </div>
+    </body></html>`;
+    const result = analyzeHtmlContent(html);
+
+    expect(result).toContain("card grid");
+    expect(result).toContain("2-col");
+  });
+
+  it("handles empty HTML gracefully", () => {
+    const result = analyzeHtmlContent("<html><body></body></html>");
+    expect(result).toContain("external HTML");
+    expect(result).toContain("Content blocks: 0");
+  });
+});

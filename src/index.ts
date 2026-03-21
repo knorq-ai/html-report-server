@@ -22,6 +22,7 @@ import {
   renderReport,
   readReport,
   editReport,
+  analyzeHtml,
   getComponentExamples,
   EngineError,
 } from "./html-engine.js";
@@ -417,6 +418,30 @@ server.tool(
   async ({ file_path, operations }) => {
     try {
       const result = await editReport(file_path, operations as EditOp[]);
+      return { content: [{ type: "text" as const, text: result }] };
+    } catch (e: unknown) {
+      return {
+        content: [{ type: "text" as const, text: formatError(e) }],
+        isError: true,
+      };
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Tool: analyze_html
+// ---------------------------------------------------------------------------
+
+server.tool(
+  "analyze_html",
+  "Analyze any HTML file and return a token-efficient structural description. Works with arbitrary HTML — not limited to files created by this MCP. Returns document structure, text content, layout patterns, and style signals. For files created by this server, detects the embedded JSON and directs you to use read_report instead.",
+  {
+    file_path: z.string().optional().describe("Absolute path to an HTML file to analyze"),
+    html_content: z.string().max(500_000).optional().describe("Raw HTML string to analyze (alternative to file_path)"),
+  },
+  async ({ file_path, html_content }) => {
+    try {
+      const result = await analyzeHtml(file_path, html_content);
       return { content: [{ type: "text" as const, text: result }] };
     } catch (e: unknown) {
       return {
