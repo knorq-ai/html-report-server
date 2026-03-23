@@ -137,10 +137,34 @@ function renderHorizontalBarChart(
   const barHeight = 28;
   const barGap = 8;
   const plotTop = title ? CHART_PADDING.top + 24 : CHART_PADDING.top;
-  const labelWidth = 100;
+
+  // Estimate label width based on longest label.
+  // CJK characters are roughly 2x the width of Latin characters at the same font size.
+  const cjkRange = /[\u2E80-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF]/;
+  const estimateTextWidth = (text: string): number => {
+    let w = 0;
+    for (const ch of text) {
+      w += cjkRange.test(ch) ? LABEL_FONT_SIZE * 1.1 : LABEL_FONT_SIZE * 0.6;
+    }
+    return w;
+  };
+  const maxLabelPx = Math.max(...data.map((d) => estimateTextWidth(d.label)));
+  const labelWidth = Math.max(100, Math.ceil(maxLabelPx + 12));
+
+  // Estimate value label width so the SVG viewBox is wide enough.
+  const longestValue = Math.max(
+    ...data.map((d) => {
+      const numStr = formatNumber(d.value);
+      const valText = unit ? `${numStr} ${unit}` : numStr;
+      return estimateTextWidth(valText);
+    }),
+  );
+  const valueLabelPad = Math.ceil(longestValue + 16);
+  const adjustedWidth = Math.max(width, labelWidth + 10 + 200 + valueLabelPad);
+
   const plotLeft = labelWidth + 10;
-  const plotRight = width - CHART_PADDING.right;
-  const plotWidth = plotRight - plotLeft;
+  const plotRight = adjustedWidth - CHART_PADDING.right - valueLabelPad;
+  const plotWidth = Math.max(plotRight - plotLeft, 40);
   const calcHeight = plotTop + data.length * (barHeight + barGap) + 20;
   const svgHeight = Math.max(height, calcHeight);
 
@@ -149,7 +173,7 @@ function renderHorizontalBarChart(
 
   if (title) {
     parts.push(
-      `<text x="${width / 2}" y="${CHART_PADDING.top}" ` +
+      `<text x="${adjustedWidth / 2}" y="${CHART_PADDING.top}" ` +
         `text-anchor="middle" font-size="${TITLE_FONT_SIZE}" ` +
         `font-weight="600" fill="var(--fg)">${escapeHtml(title)}</text>`,
     );
@@ -187,7 +211,7 @@ function renderHorizontalBarChart(
     );
   });
 
-  const svg = `<svg viewBox="0 0 ${width} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" ` +
+  const svg = `<svg viewBox="0 0 ${adjustedWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" ` +
     `role="img" aria-label="${escapeHtml(title ?? "Bar chart")}">\n${parts.join("\n")}\n</svg>`;
 
   return wrapChart(svg, preset);
