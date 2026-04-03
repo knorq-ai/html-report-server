@@ -62,7 +62,8 @@ const server = new McpServer({
     "",
     "Supported block types: section, heading, paragraph, list, callout,",
     "stat_cards, table, bar_chart, line_chart, pie_chart, progress_bars,",
-    "timeline, card_grid, comparison, badges, before_after, steps, diagram, divider, html (escape hatch).",
+    "timeline, card_grid, comparison, badges, before_after, steps, diagram,",
+    "comparison_matrix, sectioned_table, relationship_graph, divider, html (escape hatch).",
   ].join("\n"),
 });
 
@@ -170,6 +171,74 @@ const diagramLayerSchema = z.object({
   groups: z.array(diagramGroupSchema).max(20).optional(),
 });
 
+// --- comparison_matrix ---
+const matrixColumnSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  width: z.string().optional().describe('CSS width, e.g. "30%"'),
+  type: z.enum(["text", "badge", "tags"]).optional().describe('Column type: "text" (default), "badge" for status pills, "tags" for tag arrays'),
+});
+
+const matrixBadgeValueSchema = z.object({
+  text: z.string(),
+  variant: z.enum(["success", "warning", "danger", "info", "neutral"]).optional(),
+});
+
+const matrixCellValueSchema = z.union([
+  z.string(),
+  matrixBadgeValueSchema,
+  z.array(z.string()),
+]);
+
+const matrixRowSchema = z.record(z.string(), matrixCellValueSchema);
+
+// --- sectioned_table ---
+const sectionedTableSubtotalSchema = z.object({
+  label: z.string(),
+  column: z.number().min(0).describe("0-based column index for the subtotal value"),
+  value: z.string(),
+});
+
+const tableSectionSchema = z.object({
+  title: z.string(),
+  headers: z.array(z.string()),
+  rows: z.array(z.array(z.string().max(10000)).max(100)).max(1000),
+  subtotal: sectionedTableSubtotalSchema.optional(),
+});
+
+const grandTotalSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+// --- relationship_graph ---
+const graphNodeFieldSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+});
+
+const graphNodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  role: z.string().optional().describe('Node role label, e.g. "CEO", "被相続人"'),
+  fields: z.array(graphNodeFieldSchema).max(10).optional(),
+  color: z.string().optional(),
+});
+
+const graphEdgeSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  type: z.enum(["single-line", "double-line", "dashed"]).optional().describe('"single-line" (default) with arrow, "double-line" for peer/equal (no arrow), "dashed" for weak/historical'),
+  label: z.string().optional(),
+  color: z.string().optional(),
+});
+
+const graphStyleSchema = z.object({
+  font: z.enum(["serif", "sans-serif"]).optional(),
+  color: z.enum(["monochrome", "colored"]).optional(),
+  printReady: z.boolean().optional(),
+}).optional();
+
 const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("section"), title: z.string(), subtitle: z.string().optional() }),
   z.object({ type: z.literal("heading"), level: z.number().min(1).max(6), text: z.string() }),
@@ -258,6 +327,28 @@ const blockSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("before_after"), items: z.array(beforeAfterItemSchema).max(20) }),
   z.object({ type: z.literal("steps"), steps: z.array(stepItemSchema).max(8) }),
+  z.object({
+    type: z.literal("comparison_matrix"),
+    title: z.string().optional(),
+    columns: z.array(matrixColumnSchema).max(20),
+    rows: z.array(matrixRowSchema).max(500),
+  }),
+  z.object({
+    type: z.literal("sectioned_table"),
+    title: z.string().optional(),
+    sections: z.array(tableSectionSchema).max(50),
+    grandTotal: grandTotalSchema.optional(),
+  }),
+  z.object({
+    type: z.literal("relationship_graph"),
+    title: z.string().optional(),
+    layout: z.enum(["hierarchical", "radial", "force"]).optional().describe('Layout algorithm: "hierarchical" (default), "radial", or "force"'),
+    direction: z.enum(["TB", "LR"]).optional().describe('Direction for hierarchical layout: "TB" (top-bottom, default) or "LR" (left-right)'),
+    nodes: z.array(graphNodeSchema).max(100),
+    edges: z.array(graphEdgeSchema).max(500),
+    style: graphStyleSchema,
+    dark: z.boolean().optional(),
+  }),
 ]);
 
 const styleNameSchema = z

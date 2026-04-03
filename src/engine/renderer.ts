@@ -184,6 +184,14 @@ function summarizeBlock(block: Block): string {
       return `before_after: ${block.items.length} comparisons`;
     case "steps":
       return `steps: ${block.steps.length} steps — ${block.steps.map((s) => s.title).join(" → ")}`;
+    case "comparison_matrix":
+      return `comparison_matrix: ${block.columns.length} cols × ${block.rows.length} rows${block.title ? ` — "${block.title}"` : ""}`;
+    case "sectioned_table": {
+      const totalRows = block.sections.reduce((sum, s) => sum + s.rows.length, 0);
+      return `sectioned_table: ${block.sections.length} sections, ${totalRows} rows${block.title ? ` — "${block.title}"` : ""}`;
+    }
+    case "relationship_graph":
+      return `relationship_graph: ${block.nodes.length} nodes, ${block.edges.length} edges${block.title ? ` — "${block.title}"` : ""}`;
     default:
       return `unknown type`;
   }

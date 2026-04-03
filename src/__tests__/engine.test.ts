@@ -164,6 +164,20 @@ describe("renderDocument", () => {
         { type: "steps", steps: [{ title: "A" }, { title: "B" }] },
         { type: "divider" },
         { type: "html", content: "<em>custom</em>" },
+        {
+          type: "comparison_matrix",
+          columns: [{ id: "a", label: "A" }],
+          rows: [{ a: "val" }],
+        },
+        {
+          type: "sectioned_table",
+          sections: [{ title: "S", headers: ["H"], rows: [["r"]] }],
+        },
+        {
+          type: "relationship_graph",
+          nodes: [{ id: "n1", name: "N1" }, { id: "n2", name: "N2" }],
+          edges: [{ from: "n1", to: "n2" }],
+        },
       ],
     };
     const html = renderDocument(allBlocksDoc);
@@ -171,6 +185,8 @@ describe("renderDocument", () => {
     expect(html).toContain("Section");
     expect(html).toContain("Heading");
     expect(html).toContain("<em>custom</em>");
+    expect(html).toContain("<table"); // comparison_matrix
+    expect(html).toContain("<svg"); // relationship_graph
   });
 });
 
@@ -1309,5 +1325,614 @@ describe("analyzeHtmlContent", () => {
     const result = analyzeHtmlContent("<html><body></body></html>");
     expect(result).toContain("external HTML");
     expect(result).toContain("Content blocks: 0");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// comparison_matrix
+// ---------------------------------------------------------------------------
+
+describe("comparison_matrix", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders table with correct headers", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [
+          { id: "item", label: "Item" },
+          { id: "a", label: "Party A" },
+          { id: "b", label: "Party B" },
+        ],
+        rows: [
+          { item: "Point 1", a: "Yes", b: "No" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<table");
+    expect(html).toContain("Item");
+    expect(html).toContain("Party A");
+    expect(html).toContain("Party B");
+    expect(html).toContain("Point 1");
+  });
+
+  it("renders badge cells with colored styling", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [
+          { id: "name", label: "Name" },
+          { id: "status", label: "Status", type: "badge" },
+        ],
+        rows: [
+          { name: "Task 1", status: { text: "Done", variant: "success" } },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Done");
+    expect(html).toContain("var(--success)");
+  });
+
+  it("renders tags columns as pill elements", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [
+          { id: "item", label: "Item" },
+          { id: "tags", label: "Tags", type: "tags" },
+        ],
+        rows: [
+          { item: "Row 1", tags: ["alpha", "beta"] },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("alpha");
+    expect(html).toContain("beta");
+    expect(html).toContain("display:flex");
+  });
+
+  it("renders optional title", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        title: "My Matrix",
+        columns: [{ id: "a", label: "A" }],
+        rows: [{ a: "val" }],
+      },
+      preset,
+    );
+    expect(html).toContain("My Matrix");
+  });
+
+  it("escapes text cells", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [{ id: "x", label: "X" }],
+        rows: [{ x: "<script>alert(1)</script>" }],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sectioned_table
+// ---------------------------------------------------------------------------
+
+describe("sectioned_table", () => {
+  const preset = resolvePreset("clean");
+
+  it("renders section titles", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [
+          {
+            title: "Section A",
+            headers: ["Col1", "Col2"],
+            rows: [["a", "b"]],
+          },
+          {
+            title: "Section B",
+            headers: ["Col1", "Col2"],
+            rows: [["c", "d"]],
+          },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Section A");
+    expect(html).toContain("Section B");
+  });
+
+  it("renders subtotal row", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [
+          {
+            title: "Revenue",
+            headers: ["Item", "Amount"],
+            rows: [["Sales", "$1M"]],
+            subtotal: { label: "Total", column: 1, value: "$1M" },
+          },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Total");
+    expect(html).toContain("$1M");
+  });
+
+  it("renders grand total at bottom", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [
+          {
+            title: "Part 1",
+            headers: ["A"],
+            rows: [["x"]],
+          },
+        ],
+        grandTotal: { label: "Grand Total", value: "$5M" },
+      },
+      preset,
+    );
+    expect(html).toContain("Grand Total");
+    expect(html).toContain("$5M");
+  });
+
+  it("renders optional title", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        title: "Financial Report",
+        sections: [
+          { title: "S1", headers: ["A"], rows: [["1"]] },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Financial Report");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// relationship_graph
+// ---------------------------------------------------------------------------
+
+describe("relationship_graph", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders SVG with nodes", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "Alice" },
+          { id: "b", name: "Bob" },
+        ],
+        edges: [{ from: "a", to: "b" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("Alice");
+    expect(html).toContain("Bob");
+  });
+
+  it("renders edge labels", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+        ],
+        edges: [{ from: "a", to: "b", label: "connects" }],
+      },
+      preset,
+    );
+    expect(html).toContain("connects");
+  });
+
+  it("renders double-line edges as parallel lines", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+        ],
+        edges: [{ from: "a", to: "b", type: "double-line" }],
+      },
+      preset,
+    );
+    // Double-line produces two <line> or <path> elements without marker-end
+    expect(html).not.toContain('marker-end');
+  });
+
+  it("renders dashed edges with stroke-dasharray", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+        ],
+        edges: [{ from: "a", to: "b", type: "dashed" }],
+      },
+      preset,
+    );
+    expect(html).toContain("stroke-dasharray");
+  });
+
+  it("supports dark mode", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        dark: true,
+        nodes: [{ id: "a", name: "A" }],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toContain("#16162a");
+  });
+
+  it("supports serif font", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        style: { font: "serif" },
+        nodes: [{ id: "a", name: "A" }],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toContain("Georgia");
+  });
+
+  it("supports monochrome mode", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        style: { color: "monochrome" },
+        nodes: [
+          { id: "a", name: "A", color: "#ff0000" },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    // Monochrome overrides node colors — accent bar should not appear
+    expect(html).not.toContain("#ff0000");
+  });
+
+  it("renders with radial layout", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        layout: "radial",
+        nodes: [
+          { id: "a", name: "Center" },
+          { id: "b", name: "Outer1" },
+          { id: "c", name: "Outer2" },
+        ],
+        edges: [
+          { from: "a", to: "b" },
+          { from: "a", to: "c" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("Center");
+  });
+
+  it("renders with force layout", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        layout: "force",
+        nodes: [
+          { id: "a", name: "Node1" },
+          { id: "b", name: "Node2" },
+          { id: "c", name: "Node3" },
+        ],
+        edges: [
+          { from: "a", to: "b" },
+          { from: "b", to: "c" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("Node1");
+    expect(html).toContain("Node3");
+  });
+
+  it("renders node role and fields", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          {
+            id: "a",
+            name: "Alice",
+            role: "CEO",
+            fields: [{ label: "Dept", value: "Executive" }],
+          },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toContain("CEO");
+    expect(html).toContain("Dept");
+    expect(html).toContain("Executive");
+  });
+
+  it("renders LR direction", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        direction: "LR",
+        nodes: [
+          { id: "a", name: "Left" },
+          { id: "b", name: "Right" },
+        ],
+        edges: [{ from: "a", to: "b" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("Left");
+    expect(html).toContain("Right");
+  });
+
+  it("returns empty string for zero nodes", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).toBe("");
+  });
+
+  // --- XSS tests ---
+
+  it("escapes node name, role, and field values", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          {
+            id: "a",
+            name: '<script>alert("xss")</script>',
+            role: '<img onerror="hack">',
+            fields: [{ label: "<b>L</b>", value: "<i>V</i>" }],
+          },
+        ],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain('<img onerror');
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("&lt;img");
+    expect(html).toContain("&lt;b&gt;");
+    expect(html).toContain("&lt;i&gt;");
+  });
+
+  it("escapes edge labels", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+        ],
+        edges: [{ from: "a", to: "b", label: '<script>alert(1)</script>' }],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("escapes title", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        title: '<img src=x onerror=alert(1)>',
+        nodes: [{ id: "a", name: "A" }],
+        edges: [],
+      },
+      preset,
+    );
+    expect(html).not.toContain("<img src");
+    expect(html).toContain("&lt;img");
+  });
+
+  // --- Edge case tests ---
+
+  it("handles self-loop edges without crashing", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [{ id: "a", name: "Self" }],
+        edges: [{ from: "a", to: "a", label: "recursive" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("Self");
+    expect(html).toContain("recursive");
+  });
+
+  it("handles cyclic graphs (A→B→C→A)", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+          { id: "c", name: "C" },
+        ],
+        edges: [
+          { from: "a", to: "b" },
+          { from: "b", to: "c" },
+          { from: "c", to: "a" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("A");
+    expect(html).toContain("B");
+    expect(html).toContain("C");
+  });
+
+  it("handles disconnected components", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [
+          { id: "a", name: "A" },
+          { id: "b", name: "B" },
+          { id: "c", name: "C" },
+          { id: "d", name: "D" },
+        ],
+        edges: [
+          { from: "a", to: "b" },
+          { from: "c", to: "d" },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("A");
+    expect(html).toContain("D");
+  });
+
+  it("handles edges referencing non-existent nodes", () => {
+    const html = renderBlock(
+      {
+        type: "relationship_graph",
+        nodes: [{ id: "a", name: "A" }],
+        edges: [{ from: "a", to: "nonexistent" }],
+      },
+      preset,
+    );
+    expect(html).toContain("<svg");
+    expect(html).toContain("A");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// comparison_matrix — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe("comparison_matrix edge cases", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("renders empty rows", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [{ id: "a", label: "A" }],
+        rows: [],
+      },
+      preset,
+    );
+    expect(html).toContain("<table");
+    expect(html).toContain("A");
+  });
+
+  it("handles missing column IDs in row gracefully", () => {
+    const html = renderBlock(
+      {
+        type: "comparison_matrix",
+        columns: [
+          { id: "x", label: "X" },
+          { id: "y", label: "Y" },
+        ],
+        rows: [{ x: "val" }], // missing "y"
+      },
+      preset,
+    );
+    expect(html).toContain("val");
+    // Should not crash
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sectioned_table — additional edge cases
+// ---------------------------------------------------------------------------
+
+describe("sectioned_table edge cases", () => {
+  const preset = resolvePreset("mckinsey");
+
+  it("handles subtotal column=0 without losing value", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [
+          {
+            title: "S",
+            headers: ["Amount"],
+            rows: [["$100"]],
+            subtotal: { label: "Total", column: 0, value: "$100" },
+          },
+        ],
+      },
+      preset,
+    );
+    expect(html).toContain("Total");
+    expect(html).toContain("$100");
+  });
+
+  it("handles subtotal column exceeding header count", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [
+          {
+            title: "S",
+            headers: ["A", "B"],
+            rows: [["1", "2"]],
+            subtotal: { label: "Total", column: 99, value: "$500" },
+          },
+        ],
+      },
+      preset,
+    );
+    // Should clamp to last column and still render the value
+    expect(html).toContain("Total");
+    expect(html).toContain("$500");
+  });
+
+  it("renders empty sections", () => {
+    const html = renderBlock(
+      {
+        type: "sectioned_table",
+        sections: [],
+      },
+      preset,
+    );
+    // Should not crash
+    expect(html).toBeTruthy();
   });
 });

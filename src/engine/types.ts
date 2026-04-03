@@ -265,6 +265,104 @@ export interface StepsBlock {
   steps: StepItem[];
 }
 
+// ---------------------------------------------------------------------------
+// Comparison matrix block — multi-party comparison with typed columns
+// ---------------------------------------------------------------------------
+
+export type MatrixColumnType = "text" | "badge" | "tags";
+
+export interface MatrixColumn {
+  id: string;
+  label: string;
+  width?: string;              // CSS width, e.g. "30%"
+  type?: MatrixColumnType;     // default: "text"
+}
+
+export interface MatrixBadgeValue {
+  text: string;
+  variant?: "success" | "warning" | "danger" | "info" | "neutral";
+}
+
+export type MatrixCellValue = string | MatrixBadgeValue | string[];
+
+export interface ComparisonMatrixBlock {
+  type: "comparison_matrix";
+  title?: string;
+  columns: MatrixColumn[];
+  rows: Record<string, MatrixCellValue>[];
+}
+
+// ---------------------------------------------------------------------------
+// Sectioned table block — multi-section table with subtotals
+// ---------------------------------------------------------------------------
+
+export interface SectionedTableSubtotal {
+  label: string;
+  column: number;              // 0-based column index for the value
+  value: string;
+}
+
+export interface TableSection {
+  title: string;
+  headers: string[];
+  rows: string[][];
+  subtotal?: SectionedTableSubtotal;
+}
+
+export interface SectionedTableBlock {
+  type: "sectioned_table";
+  title?: string;
+  sections: TableSection[];
+  grandTotal?: { label: string; value: string };
+}
+
+// ---------------------------------------------------------------------------
+// Relationship graph block — node-and-edge diagram with layout options
+// ---------------------------------------------------------------------------
+
+export interface GraphNodeField {
+  label: string;
+  value: string;
+}
+
+export interface GraphNode {
+  id: string;
+  name: string;
+  role?: string;               // e.g. "被相続人", "CEO"
+  fields?: GraphNodeField[];
+  color?: string;
+}
+
+export type GraphEdgeType = "single-line" | "double-line" | "dashed";
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  type?: GraphEdgeType;        // default: "single-line"
+  label?: string;
+  color?: string;
+}
+
+export interface GraphStyle {
+  font?: "serif" | "sans-serif";
+  color?: "monochrome" | "colored";
+  printReady?: boolean;
+}
+
+export type GraphLayout = "hierarchical" | "radial" | "force";
+export type GraphDirection = "TB" | "LR";
+
+export interface RelationshipGraphBlock {
+  type: "relationship_graph";
+  title?: string;
+  layout?: GraphLayout;        // default: "hierarchical"
+  direction?: GraphDirection;   // default: "TB"
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  style?: GraphStyle;
+  dark?: boolean;
+}
+
 export type Block =
   | SectionBlock
   | HeadingBlock
@@ -287,7 +385,10 @@ export type Block =
   | RawHtmlBlock
   | DiagramBlock
   | BeforeAfterBlock
-  | StepsBlock;
+  | StepsBlock
+  | ComparisonMatrixBlock
+  | SectionedTableBlock
+  | RelationshipGraphBlock;
 
 // ---------------------------------------------------------------------------
 // Style preset — design tokens consumed by component renderers

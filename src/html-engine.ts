@@ -486,6 +486,77 @@ export function getComponentExamples(): string {
         { from: "worker", to: "redis", style: "dashed" },
       ],
     },
+    comparison_matrix: {
+      type: "comparison_matrix",
+      title: "Feature Comparison",
+      columns: [
+        { id: "feature", label: "Feature", width: "30%" },
+        { id: "plan_a", label: "Basic" },
+        { id: "plan_b", label: "Pro" },
+        { id: "status", label: "Status", type: "badge" },
+        { id: "tags", label: "Tags", type: "tags" },
+      ],
+      rows: [
+        {
+          feature: "Storage",
+          plan_a: "10 GB",
+          plan_b: "100 GB",
+          status: { text: "Available", variant: "success" },
+          tags: ["cloud", "storage"],
+        },
+        {
+          feature: "Support",
+          plan_a: "Email only",
+          plan_b: "24/7 priority",
+          status: { text: "Partial", variant: "warning" },
+          tags: ["support"],
+        },
+      ],
+    },
+    sectioned_table: {
+      type: "sectioned_table",
+      title: "Financial Summary",
+      sections: [
+        {
+          title: "1. Revenue",
+          headers: ["#", "Source", "Q1", "Q2", "Total"],
+          rows: [
+            ["1", "Product Sales", "$1.2M", "$1.5M", "$2.7M"],
+            ["2", "Services", "$400K", "$500K", "$900K"],
+          ],
+          subtotal: { label: "Revenue Total", column: 4, value: "$3.6M" },
+        },
+        {
+          title: "2. Expenses",
+          headers: ["#", "Category", "Q1", "Q2", "Total"],
+          rows: [
+            ["1", "Engineering", "$600K", "$650K", "$1.25M"],
+            ["2", "Marketing", "$200K", "$250K", "$450K"],
+          ],
+          subtotal: { label: "Expense Total", column: 4, value: "$1.7M" },
+        },
+      ],
+      grandTotal: { label: "Net Income", value: "$1.9M" },
+    },
+    relationship_graph: {
+      type: "relationship_graph",
+      title: "Organization Chart",
+      layout: "hierarchical",
+      direction: "TB",
+      nodes: [
+        { id: "ceo", name: "Alice Chen", role: "CEO" },
+        { id: "cto", name: "Bob Smith", role: "CTO", fields: [{ label: "Dept", value: "Engineering" }] },
+        { id: "cfo", name: "Carol Lee", role: "CFO", fields: [{ label: "Dept", value: "Finance" }] },
+        { id: "eng1", name: "Dave Kim", role: "Lead Engineer" },
+        { id: "eng2", name: "Eve Park", role: "Lead Engineer" },
+      ],
+      edges: [
+        { from: "ceo", to: "cto", label: "reports-to" },
+        { from: "ceo", to: "cfo", label: "reports-to" },
+        { from: "cto", to: "eng1" },
+        { from: "cto", to: "eng2" },
+      ],
+    },
     html: {
       type: "html",
       content: "<div style=\"text-align:center;color:var(--muted)\">Custom HTML content</div>",

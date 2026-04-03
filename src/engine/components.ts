@@ -28,12 +28,18 @@ import type {
   RawHtmlBlock,
   BeforeAfterBlock,
   StepsBlock,
+  ComparisonMatrixBlock,
+  SectionedTableBlock,
+  RelationshipGraphBlock,
+  MatrixColumn,
+  MatrixCellValue,
   StylePreset,
 } from "./types.js";
 import { inlineStyle, styleAttr } from "./theme.js";
 import { escapeHtml, sanitizeInlineHtml, sanitizeBlockHtml, sanitizeCssValue, elem } from "./html-utils.js";
 import { renderBarChart, renderLineChart, renderPieChart } from "./charts.js";
 import { renderDiagram } from "./diagrams.js";
+import { renderRelationshipGraph } from "./graph.js";
 
 // ---------------------------------------------------------------------------
 // Badge variant → color mapping
@@ -1147,6 +1153,284 @@ function renderSteps(block: StepsBlock, preset: StylePreset): string {
 }
 
 // ---------------------------------------------------------------------------
+// Comparison matrix
+// ---------------------------------------------------------------------------
+
+function renderMatrixCell(
+  value: MatrixCellValue | undefined,
+  col: MatrixColumn,
+  preset: StylePreset,
+): string {
+  const colType = col.type ?? "text";
+
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (colType === "badge" && typeof value === "object" && !Array.isArray(value)) {
+    const v = value.variant ?? "neutral";
+    const colors = BADGE_COLORS[v] ?? BADGE_COLORS.neutral;
+    const style = inlineStyle({
+      display: "inline-block",
+      padding: "0.2rem 0.6rem",
+      borderRadius: "999px",
+      fontSize: "0.72rem",
+      fontWeight: "600",
+      background: colors.bg,
+      color: colors.fg,
+      whiteSpace: "nowrap",
+    });
+    return elem("span", { style }, escapeHtml(value.text));
+  }
+
+  if (colType === "tags" && Array.isArray(value)) {
+    const containerStyle = inlineStyle({
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "0.3rem",
+    });
+    const tagStyle = inlineStyle({
+      display: "inline-block",
+      padding: "0.15rem 0.5rem",
+      borderRadius: "4px",
+      fontSize: "0.72rem",
+      background: "var(--code-bg)",
+      color: "var(--fg)",
+      whiteSpace: "nowrap",
+    });
+    const tags = value.map((t) => elem("span", { style: tagStyle }, escapeHtml(t))).join("");
+    return elem("div", { style: containerStyle }, tags);
+  }
+
+  // Default: text (string value, or fallback)
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return escapeHtml(text);
+}
+
+function renderComparisonMatrix(block: ComparisonMatrixBlock, preset: StylePreset): string {
+  const ts = preset.table;
+  const parts: string[] = [];
+
+  if (block.title) {
+    const titleStyle = inlineStyle({
+      fontSize: "1rem",
+      fontWeight: "700",
+      marginBottom: "0.75rem",
+      color: "var(--fg)",
+    });
+    parts.push(elem("div", { style: titleStyle }, escapeHtml(block.title)));
+  }
+
+  const wrapperStyle = inlineStyle({
+    overflowX: "auto",
+    marginBottom: preset.blockGap,
+    borderRadius: ts.borderRadius !== "0" ? ts.borderRadius : undefined,
+    border: ts.outerBorder,
+    boxShadow: "var(--shadow-sm)",
+  });
+
+  const tableStyle = inlineStyle({
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "0.875rem",
+  });
+
+  // Headers
+  const ths = block.columns
+    .map((col) => {
+      const thStyle = inlineStyle({
+        background: ts.headerBg,
+        color: ts.headerColor,
+        padding: "0.7rem 1rem",
+        textAlign: "left",
+        fontWeight: "700",
+        fontSize: "0.72rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.07em",
+        borderBottom: `2px solid var(--border)`,
+        width: col.width,
+      });
+      return elem("th", { style: thStyle }, escapeHtml(col.label));
+    })
+    .join("");
+  const thead = `<thead><tr>${ths}</tr></thead>`;
+
+  // Rows
+  const rows = block.rows
+    .map((row, ri) => {
+      const rowBg = ts.stripedRows && ri % 2 === 1 ? "var(--code-bg)" : undefined;
+      const tds = block.columns
+        .map((col) => {
+          const tdStyle = inlineStyle({
+            padding: "0.6rem 1rem",
+            borderBottom: "1px solid var(--border)",
+            background: rowBg,
+            lineHeight: "1.5",
+            verticalAlign: "top",
+          });
+          const cellHtml = renderMatrixCell(row[col.id], col, preset);
+          return elem("td", { style: tdStyle }, cellHtml);
+        })
+        .join("");
+      return `<tr>${tds}</tr>`;
+    })
+    .join("\n");
+  const tbody = `<tbody>${rows}</tbody>`;
+
+  parts.push(
+    elem("div", { style: wrapperStyle },
+      elem("table", { style: tableStyle }, thead + tbody)),
+  );
+
+  return parts.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Sectioned table
+// ---------------------------------------------------------------------------
+
+function renderSectionedTable(block: SectionedTableBlock, preset: StylePreset): string {
+  const ts = preset.table;
+  const parts: string[] = [];
+
+  if (block.title) {
+    const titleStyle = inlineStyle({
+      fontSize: "1.1rem",
+      fontWeight: "700",
+      marginBottom: "0.75rem",
+      color: "var(--fg)",
+    });
+    parts.push(elem("div", { style: titleStyle }, escapeHtml(block.title)));
+  }
+
+  for (const section of block.sections) {
+    // Section title
+    const sectionTitleStyle = inlineStyle({
+      fontSize: "0.85rem",
+      fontWeight: "700",
+      padding: "0.6rem 1rem",
+      background: "var(--code-bg)",
+      color: "var(--fg)",
+      borderBottom: "1px solid var(--border)",
+      marginTop: parts.length > (block.title ? 1 : 0) ? "0.5rem" : undefined,
+    });
+    parts.push(elem("div", { style: sectionTitleStyle }, escapeHtml(section.title)));
+
+    const wrapperStyle = inlineStyle({
+      overflowX: "auto",
+      borderRadius: ts.borderRadius !== "0" ? ts.borderRadius : undefined,
+      border: ts.outerBorder,
+      boxShadow: "var(--shadow-sm)",
+    });
+
+    const tableStyle = inlineStyle({
+      width: "100%",
+      borderCollapse: "collapse",
+      fontSize: "0.875rem",
+    });
+
+    // Headers
+    const thStyle = inlineStyle({
+      background: ts.headerBg,
+      color: ts.headerColor,
+      padding: "0.6rem 1rem",
+      textAlign: "left",
+      fontWeight: "700",
+      fontSize: "0.72rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.07em",
+      borderBottom: `2px solid var(--border)`,
+    });
+    const ths = section.headers
+      .map((h) => elem("th", { style: thStyle }, escapeHtml(h)))
+      .join("");
+    const thead = `<thead><tr>${ths}</tr></thead>`;
+
+    // Rows
+    const rows = section.rows
+      .map((row, ri) => {
+        const rowBg = ts.stripedRows && ri % 2 === 1 ? "var(--code-bg)" : undefined;
+        const tds = row
+          .map((cell) => {
+            const tdStyle = inlineStyle({
+              padding: "0.5rem 1rem",
+              borderBottom: "1px solid var(--border)",
+              background: rowBg,
+              lineHeight: "1.5",
+              verticalAlign: "top",
+            });
+            return elem("td", { style: tdStyle }, escapeHtml(cell));
+          })
+          .join("");
+        return `<tr>${tds}</tr>`;
+      })
+      .join("\n");
+
+    // Subtotal row
+    let subtotalHtml = "";
+    if (section.subtotal) {
+      const sub = section.subtotal;
+      // Clamp column index to valid range
+      const valueCol = Math.min(sub.column, section.headers.length - 1);
+      const subtotalCells = section.headers
+        .map((_, ci) => {
+          // When value column is 0, show "label  value" in a single cell
+          const isValueCol = ci === valueCol;
+          let content: string;
+          if (ci === 0 && valueCol === 0) {
+            content = escapeHtml(sub.label) + `<span style="float:right">${escapeHtml(sub.value)}</span>`;
+          } else if (ci === 0) {
+            content = escapeHtml(sub.label);
+          } else if (isValueCol) {
+            content = escapeHtml(sub.value);
+          } else {
+            content = "";
+          }
+          const cellStyle = inlineStyle({
+            padding: "0.5rem 1rem",
+            fontWeight: "700",
+            borderTop: "2px solid var(--border)",
+            textAlign: isValueCol && valueCol !== 0 ? "right" : "left",
+            background: "var(--code-bg)",
+          });
+          return elem("td", { style: cellStyle }, content);
+        })
+        .join("");
+      subtotalHtml = `<tr>${subtotalCells}</tr>`;
+    }
+
+    const tbody = `<tbody>${rows}${subtotalHtml}</tbody>`;
+    parts.push(elem("div", { style: wrapperStyle }, elem("table", { style: tableStyle }, thead + tbody)));
+  }
+
+  // Grand total
+  if (block.grandTotal) {
+    const gtStyle = inlineStyle({
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "0.75rem 1rem",
+      fontWeight: "700",
+      fontSize: "1rem",
+      borderTop: "3px solid var(--fg)",
+      marginTop: "0.25rem",
+      color: "var(--fg)",
+    });
+    parts.push(
+      elem("div", { style: gtStyle },
+        elem("span", {}, escapeHtml(block.grandTotal.label)) +
+        elem("span", {}, escapeHtml(block.grandTotal.value)),
+      ),
+    );
+  }
+
+  const containerStyle = inlineStyle({
+    marginBottom: preset.blockGap,
+  });
+  return elem("div", { style: containerStyle }, parts.join("\n"));
+}
+
+// ---------------------------------------------------------------------------
 // Block dispatcher
 // ---------------------------------------------------------------------------
 
@@ -1199,6 +1483,12 @@ export function renderBlock(block: Block, preset: StylePreset): string {
       return renderBeforeAfter(block, preset);
     case "steps":
       return renderSteps(block, preset);
+    case "comparison_matrix":
+      return renderComparisonMatrix(block, preset);
+    case "sectioned_table":
+      return renderSectionedTable(block, preset);
+    case "relationship_graph":
+      return renderRelationshipGraph(block, preset);
     default: {
       // Exhaustive check: if a new block type is added, TypeScript will catch it
       const _exhaustive: never = block;
