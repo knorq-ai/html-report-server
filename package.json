@@ -1,6 +1,6 @@
 {
   "name": "html-report-server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "MCP server for generating styled HTML reports from structured JSON — stat cards, tables, SVG charts, timelines, and more",
   "type": "module",
   "main": "dist/index.js",
