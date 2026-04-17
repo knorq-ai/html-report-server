@@ -1,6 +1,6 @@
 {
-  "name": "html-report-server",
-  "version": "1.4.0",
+  "name": "@llamadrive/html-report-server",
+  "version": "2.0.0",
   "description": "MCP server for generating styled HTML reports from structured JSON — stat cards, tables, SVG charts, timelines, and more",
   "type": "module",
   "main": "dist/index.js",
@@ -38,7 +38,7 @@
     "url": "https://github.com/knorq-ai/html-report-server/issues"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

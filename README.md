@@ -71,7 +71,7 @@ Add to `~/.claude.json`:
     "html-report": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "html-report-server@latest"]
+      "args": ["-y", "@llamadrive/html-report-server@latest"]
     }
   }
 }
@@ -85,7 +85,7 @@ Add to your MCP server configuration:
 {
   "html-report": {
     "command": "npx",
-    "args": ["-y", "html-report-server@latest"]
+    "args": ["-y", "@llamadrive/html-report-server@latest"]
   }
 }
 ```
